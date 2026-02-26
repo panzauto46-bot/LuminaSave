@@ -2,6 +2,8 @@
 
 LuminaSave is a consumer-first DeFi savings app built for the YO SDK Hackathon.
 
+Built by **Pandu Dargah**.
+
 ## Hackathon Fit
 
 This project is designed to match the judging rubric:
@@ -92,3 +94,7 @@ Use this format in submission text:
 - Deposit tx (Base): `https://basescan.org/tx/<hash>`
 - Redeem tx (Base/Ethereum/Arbitrum): `https://.../tx/<hash>`
 - Optional queued redeem request id: `Request #<id>`
+
+## Author
+
+- Pandu Dargah
