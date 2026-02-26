@@ -2,12 +2,38 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { X, ArrowUpCircle, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatUnits } from 'viem';
+import { useAccount } from 'wagmi';
+import { useYoRuntime } from '../hooks/useYoRuntime';
+
+function shortHash(hash: string) {
+  if (!hash || hash.length < 16) return hash;
+  return `${hash.slice(0, 10)}...${hash.slice(-6)}`;
+}
+
+function formatErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : 'Unknown error';
+  const lower = message.toLowerCase();
+
+  if (lower.includes('user rejected') || lower.includes('denied')) {
+    return 'Transaction was rejected in wallet.';
+  }
+  if (lower.includes('account not connected') || lower.includes('wallet')) {
+    return 'Please connect your wallet first.';
+  }
+  if (lower.includes('chain') || lower.includes('network')) {
+    return 'Switch wallet network to Base, Arbitrum, or Ethereum.';
+  }
+  return message;
+}
 
 export default function RedeemModal() {
   const { state, dispatch } = useApp();
   const dark = state.darkMode;
   const { open, goalId } = state.redeemModal;
   const goal = state.goals.find((g) => g.id === goalId);
+  const { address } = useAccount();
+  const { client, network, vault, tokenDecimals } = useYoRuntime('yoUSD');
 
   const [percentage, setPercentage] = useState(25);
   const [step, setStep] = useState<'input' | 'loading' | 'success' | 'failed'>('input');
@@ -19,8 +45,20 @@ export default function RedeemModal() {
   const yieldPortion = (goal.yieldEarned * percentage) / 100;
   const totalWithdraw = withdrawAmount + yieldPortion;
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (percentage <= 0) return;
+
+    if (!state.connected || !address) {
+      setStep('failed');
+      setErrorMessage('Please connect wallet before redeeming.');
+      return;
+    }
+
+    if (!client || !vault || !network) {
+      setStep('failed');
+      setErrorMessage('YO vault is not ready on this network. Switch to Base, Arbitrum, or Ethereum.');
+      return;
+    }
 
     const noticeId = `n-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
     dispatch({
@@ -28,51 +66,98 @@ export default function RedeemModal() {
       payload: {
         id: noticeId,
         title: 'Withdrawal pending',
-        message: `Redeeming ${percentage}% from ${goal.name}.`,
+        message: `Submitting redeem from ${goal.name}...`,
         type: 'pending',
       },
     });
 
     setStep('loading');
-    setTimeout(() => {
-      const shouldFail = Math.random() < 0.1;
-      if (shouldFail) {
-        setStep('failed');
-        setErrorMessage('Vault liquidity is temporarily constrained. Please retry shortly.');
-        dispatch({
-          type: 'UPDATE_NOTIFICATION',
-          payload: {
-            id: noticeId,
-            patch: {
-              title: 'Withdrawal failed',
-              message: 'Network confirmation timed out in simulator.',
-              type: 'failed',
-            },
-          },
-        });
-        return;
+    setErrorMessage('');
+
+    try {
+      const position = await client.getUserPosition(vault.address, address);
+      if (position.shares <= 0n) {
+        throw new Error('No YO vault shares found for this wallet on current chain.');
       }
 
-      dispatch({ type: 'REDEEM', payload: { goalId: goal.id, percentage } });
+      const sharesToRedeem = (position.shares * BigInt(percentage)) / 100n;
+      if (sharesToRedeem <= 0n) {
+        throw new Error('Redeem amount is too small. Increase percentage.');
+      }
+
+      const redeemTx = await client.redeem({
+        vault: vault.address,
+        shares: sharesToRedeem,
+        recipient: address,
+      });
+
+      dispatch({
+        type: 'UPDATE_NOTIFICATION',
+        payload: {
+          id: noticeId,
+          patch: {
+            title: 'Withdrawal submitted',
+            message: `Redeem tx sent: ${shortHash(redeemTx.hash)}`,
+            type: 'pending',
+          },
+        },
+      });
+
+      const redeemReceipt = await client.waitForRedeemReceipt(redeemTx.hash);
+      if (redeemReceipt.status !== 'success') {
+        throw new Error('Redeem transaction reverted onchain.');
+      }
+
+      const redeemedAssets = redeemReceipt.instant ? redeemReceipt.assetsOrRequestId : redeemTx.assets;
+      const redeemedUsd = Number(formatUnits(redeemedAssets, tokenDecimals));
+      const status = redeemReceipt.instant ? 'success' : 'pending';
+
       setStep('success');
       dispatch({
         type: 'UPDATE_NOTIFICATION',
         payload: {
           id: noticeId,
           patch: {
-            title: 'Withdrawal success',
-            message: `$${totalWithdraw.toFixed(2)} withdrawn from ${goal.name}.`,
-            type: 'success',
+            title: redeemReceipt.instant ? 'Withdrawal success' : 'Withdrawal queued',
+            message: redeemReceipt.instant
+              ? `$${redeemedUsd.toFixed(2)} redeemed from ${goal.name} on ${network}.`
+              : `Redeem request queued on ${network}. Request ID: ${redeemReceipt.assetsOrRequestId.toString()}.`,
+            type: redeemReceipt.instant ? 'success' : 'pending',
           },
         },
       });
 
-      setTimeout(() => {
+      window.setTimeout(() => {
+        dispatch({
+          type: 'REDEEM',
+          payload: {
+            goalId: goal.id,
+            percentage,
+            txHash: redeemTx.hash,
+            network,
+            status,
+          },
+        });
         setStep('input');
         setPercentage(25);
         setErrorMessage('');
-      }, 2000);
-    }, 2500);
+      }, 1300);
+    } catch (error) {
+      const message = formatErrorMessage(error);
+      setStep('failed');
+      setErrorMessage(message);
+      dispatch({
+        type: 'UPDATE_NOTIFICATION',
+        payload: {
+          id: noticeId,
+          patch: {
+            title: 'Withdrawal failed',
+            message,
+            type: 'failed',
+          },
+        },
+      });
+    }
   };
 
   const handleClose = () => {

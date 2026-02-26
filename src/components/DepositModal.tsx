@@ -1,18 +1,48 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { X, ArrowDownCircle, Loader2, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { parseUnits } from 'viem';
+import { useAccount } from 'wagmi';
+import { useYoRuntime } from '../hooks/useYoRuntime';
+
+function shortHash(hash: string) {
+  if (!hash || hash.length < 16) return hash;
+  return `${hash.slice(0, 10)}...${hash.slice(-6)}`;
+}
+
+function formatErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : 'Unknown error';
+  const lower = message.toLowerCase();
+
+  if (lower.includes('user rejected') || lower.includes('denied')) {
+    return 'Transaction was rejected in wallet.';
+  }
+  if (lower.includes('account not connected') || lower.includes('wallet')) {
+    return 'Please connect your wallet first.';
+  }
+  if (lower.includes('chain') || lower.includes('network')) {
+    return 'Switch wallet network to Base, Arbitrum, or Ethereum.';
+  }
+  return message;
+}
 
 export default function DepositModal() {
   const { state, dispatch } = useApp();
   const dark = state.darkMode;
   const { open, goalId } = state.depositModal;
   const goal = state.goals.find((g) => g.id === goalId);
+  const { address } = useAccount();
+  const { client, network, vault, tokenAddress, tokenDecimals } = useYoRuntime('yoUSD');
 
   const [amount, setAmount] = useState('');
   const [selectedGoal, setSelectedGoal] = useState(goalId || '');
   const [step, setStep] = useState<'input' | 'loading' | 'success' | 'failed'>('input');
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    setSelectedGoal(goalId || '');
+  }, [goalId]);
 
   if (!open) return null;
 
@@ -21,8 +51,35 @@ export default function DepositModal() {
   const gasFee = 0.05;
   const total = amountNum + gasFee;
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (amountNum <= 0 || !activeGoal) return;
+
+    if (!state.connected || !address) {
+      setStep('failed');
+      setErrorMessage('Please connect wallet before making a deposit.');
+      return;
+    }
+
+    if (!client || !vault || !tokenAddress || !network) {
+      setStep('failed');
+      setErrorMessage('YO vault is not ready on this network. Switch to Base, Arbitrum, or Ethereum.');
+      return;
+    }
+
+    let amountAtomic: bigint;
+    try {
+      amountAtomic = parseUnits(amount, tokenDecimals);
+    } catch {
+      setStep('failed');
+      setErrorMessage(`Invalid amount format. Use up to ${tokenDecimals} decimals.`);
+      return;
+    }
+
+    if (amountAtomic <= 0n) {
+      setStep('failed');
+      setErrorMessage('Deposit amount must be greater than zero.');
+      return;
+    }
 
     const noticeId = `n-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
     dispatch({
@@ -30,32 +87,41 @@ export default function DepositModal() {
       payload: {
         id: noticeId,
         title: 'Deposit pending',
-        message: `Submitting $${amountNum.toFixed(2)} to ${activeGoal.name}.`,
+        message: `Submitting onchain deposit to ${activeGoal.name}...`,
         type: 'pending',
       },
     });
 
     setStep('loading');
-    setTimeout(() => {
-      const shouldFail = Math.random() < 0.12;
-      if (shouldFail) {
-        setStep('failed');
-        setErrorMessage('Network is busy. Please retry in a moment.');
-        dispatch({
-          type: 'UPDATE_NOTIFICATION',
-          payload: {
-            id: noticeId,
-            patch: {
-              title: 'Deposit failed',
-              message: 'Transaction was rejected by the network simulator.',
-              type: 'failed',
-            },
+    setErrorMessage('');
+
+    try {
+      const { approveHash, depositHash } = await client.depositWithApproval({
+        token: tokenAddress,
+        vault: vault.address,
+        amount: amountAtomic,
+        recipient: address,
+      });
+
+      dispatch({
+        type: 'UPDATE_NOTIFICATION',
+        payload: {
+          id: noticeId,
+          patch: {
+            title: 'Deposit submitted',
+            message: approveHash
+              ? `Approve + deposit sent. Tx ${shortHash(depositHash)}`
+              : `Deposit sent. Tx ${shortHash(depositHash)}`,
+            type: 'pending',
           },
-        });
-        return;
+        },
+      });
+
+      const receipt = await client.waitForTransaction(depositHash);
+      if (receipt.status !== 'success') {
+        throw new Error('Deposit transaction reverted onchain.');
       }
 
-      dispatch({ type: 'DEPOSIT', payload: { goalId: activeGoal.id, amount: amountNum } });
       setStep('success');
       dispatch({
         type: 'UPDATE_NOTIFICATION',
@@ -63,18 +129,42 @@ export default function DepositModal() {
           id: noticeId,
           patch: {
             title: 'Deposit success',
-            message: `$${amountNum.toFixed(2)} deposited to ${activeGoal.name}.`,
+            message: `$${amountNum.toFixed(2)} deposited to ${activeGoal.name} on ${network}.`,
             type: 'success',
           },
         },
       });
 
-      setTimeout(() => {
+      window.setTimeout(() => {
+        dispatch({
+          type: 'DEPOSIT',
+          payload: {
+            goalId: activeGoal.id,
+            amount: amountNum,
+            txHash: depositHash,
+            network,
+          },
+        });
         setStep('input');
         setAmount('');
         setErrorMessage('');
-      }, 2000);
-    }, 2500);
+      }, 1300);
+    } catch (error) {
+      const message = formatErrorMessage(error);
+      setStep('failed');
+      setErrorMessage(message);
+      dispatch({
+        type: 'UPDATE_NOTIFICATION',
+        payload: {
+          id: noticeId,
+          patch: {
+            title: 'Deposit failed',
+            message,
+            type: 'failed',
+          },
+        },
+      });
+    }
   };
 
   const handleClose = () => {

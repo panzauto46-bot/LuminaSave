@@ -108,19 +108,12 @@ type Action =
   | { type: 'UPDATE_NOTIFICATION'; payload: { id: string; patch: Partial<Pick<AppNotification, 'title' | 'message' | 'type'>> } }
   | { type: 'REMOVE_NOTIFICATION'; payload: string }
   | { type: 'ADD_GOAL'; payload: SavingsGoal }
-  | { type: 'DEPOSIT'; payload: { goalId: string; amount: number } }
-  | { type: 'REDEEM'; payload: { goalId: string; percentage: number } }
+  | { type: 'DEPOSIT'; payload: { goalId: string; amount: number; txHash: string; network: Transaction['network'] } }
+  | { type: 'REDEEM'; payload: { goalId: string; percentage: number; txHash: string; network: Transaction['network']; status?: Transaction['status'] } }
   | { type: 'OPEN_DEPOSIT'; payload: string }
   | { type: 'CLOSE_DEPOSIT' }
   | { type: 'OPEN_REDEEM'; payload: string }
   | { type: 'CLOSE_REDEEM' };
-
-function generateTxHash() {
-  const chars = '0123456789abcdef';
-  let hash = '0x';
-  for (let i = 0; i < 40; i++) hash += chars[Math.floor(Math.random() * 16)];
-  return hash;
-}
 
 function reducer(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -169,7 +162,7 @@ function reducer(state: AppState, action: Action): AppState {
     case 'ADD_GOAL':
       return { ...state, goals: [...state.goals, action.payload], page: 'dashboard' };
     case 'DEPOSIT': {
-      const { goalId, amount } = action.payload;
+      const { goalId, amount, txHash, network } = action.payload;
       const updatedGoals = state.goals.map((g) =>
         g.id === goalId ? { ...g, currentAmount: g.currentAmount + amount } : g
       );
@@ -182,22 +175,24 @@ function reducer(state: AppState, action: Action): AppState {
         amount,
         status: 'success',
         date: new Date().toISOString().split('T')[0],
-        txHash: generateTxHash(),
-        network: ['Base', 'Arbitrum', 'Ethereum'][Math.floor(Math.random() * 3)] as Transaction['network'],
+        txHash,
+        network,
       };
       return { ...state, goals: updatedGoals, transactions: [newTx, ...state.transactions], depositModal: { open: false, goalId: null } };
     }
     case 'REDEEM': {
-      const { goalId, percentage } = action.payload;
+      const { goalId, percentage, txHash, network, status = 'success' } = action.payload;
       const goal = state.goals.find((g) => g.id === goalId);
       if (!goal) return state;
       const withdrawAmount = (goal.currentAmount * percentage) / 100;
       const yieldWithdraw = (goal.yieldEarned * percentage) / 100;
-      const updatedGoals = state.goals.map((g) =>
-        g.id === goalId
-          ? { ...g, currentAmount: g.currentAmount - withdrawAmount, yieldEarned: g.yieldEarned - yieldWithdraw }
-          : g
-      );
+      const updatedGoals = status === 'success'
+        ? state.goals.map((g) =>
+            g.id === goalId
+              ? { ...g, currentAmount: g.currentAmount - withdrawAmount, yieldEarned: g.yieldEarned - yieldWithdraw }
+              : g
+          )
+        : state.goals;
       const newTx: Transaction = {
         id: `t${Date.now()}`,
         goalId,
@@ -205,10 +200,10 @@ function reducer(state: AppState, action: Action): AppState {
         type: 'withdraw',
         amount: withdrawAmount,
         yieldAmount: yieldWithdraw,
-        status: 'success',
+        status,
         date: new Date().toISOString().split('T')[0],
-        txHash: generateTxHash(),
-        network: ['Base', 'Arbitrum', 'Ethereum'][Math.floor(Math.random() * 3)] as Transaction['network'],
+        txHash,
+        network,
       };
       return { ...state, goals: updatedGoals, transactions: [newTx, ...state.transactions], redeemModal: { open: false, goalId: null } };
     }

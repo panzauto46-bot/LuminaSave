@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
+    "@yo-protocol/core": "^0.0.3",
+    "@yo-protocol/react": "^0.0.3",
     "clsx": "2.1.1",
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.575.0",
