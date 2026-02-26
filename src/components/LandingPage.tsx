@@ -1,13 +1,28 @@
 import { useApp } from '../context/AppContext';
 import { Shield, TrendingUp, Wallet, ChevronRight, Lock, Zap, Globe } from 'lucide-react';
 import { motion } from 'framer-motion';
+import type { MouseEvent } from 'react';
 
 export default function LandingPage() {
   const { state, dispatch } = useApp();
   const dark = state.darkMode;
+  const trackPointer = (e: MouseEvent<HTMLElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    e.currentTarget.style.setProperty('--mx', `${x}%`);
+    e.currentTarget.style.setProperty('--my', `${y}%`);
+  };
 
   return (
-    <div className={`min-h-screen ${dark ? 'bg-navy-950 text-white' : 'bg-white text-gray-900'}`}>
+    <div className={`relative min-h-screen overflow-hidden ${dark ? 'bg-navy-950 text-white' : 'bg-slate-50 text-gray-900'}`}>
+      <div className="web3-bg">
+        <div className="web3-grid" />
+        <div className="web3-flow" />
+        <div className="web3-orb web3-orb--one" />
+        <div className="web3-orb web3-orb--two" />
+      </div>
+
       {/* Hero */}
       <section className="relative overflow-hidden">
         {/* Background effects */}
@@ -28,16 +43,21 @@ export default function LandingPage() {
             className="text-center max-w-3xl mx-auto"
           >
             {/* Badge */}
-            <div className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium mb-8 ${
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2, duration: 0.4 }}
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium mb-8 backdrop-blur-xl ${
               dark
                 ? 'bg-neon-green/10 text-neon-green border border-neon-green/20'
                 : 'bg-mint-50 text-mint-700 border border-mint-200'
-            }`}>
+            }`}
+            >
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
               Powered by YO Protocol — Up to 12.5% APY
-            </div>
+            </motion.div>
 
-            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6">
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 font-display">
               Crypto Savings,{' '}
               <span className={`bg-clip-text text-transparent ${
                 dark
@@ -59,7 +79,7 @@ export default function LandingPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={() => dispatch({ type: 'CONNECT_WALLET' })}
-                className={`group px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all transform hover:scale-105 ${
+                className={`group btn-sheen px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all transform hover:scale-105 ${
                   dark
                     ? 'bg-gradient-to-r from-neon-cyan to-neon-green text-navy-950 hover:shadow-lg hover:shadow-neon-cyan/30'
                     : 'bg-gradient-to-r from-mint-500 to-trust-600 text-white hover:shadow-lg hover:shadow-mint-500/30'
@@ -71,7 +91,7 @@ export default function LandingPage() {
               </button>
               <button
                 onClick={() => dispatch({ type: 'CONNECT_WALLET' })}
-                className={`px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all border-2 ${
+                className={`btn-sheen px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all border-2 ${
                   dark
                     ? 'border-white/20 text-white hover:bg-white/10'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -87,7 +107,7 @@ export default function LandingPage() {
 
       {/* Trust signals */}
       <section className={`py-12 border-y ${
-        dark ? 'bg-navy-900/50 border-white/5' : 'bg-gray-50 border-gray-100'
+        dark ? 'bg-navy-900/45 border-white/5' : 'bg-white/80 border-gray-100 backdrop-blur-xl'
       }`}>
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16">
@@ -171,9 +191,11 @@ export default function LandingPage() {
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -6, scale: 1.02 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }}
-                className={`p-6 rounded-2xl border transition-all hover:scale-[1.02] ${
+                onMouseMove={trackPointer}
+                className={`interactive-card p-6 rounded-2xl border transition-all ${
                   dark
                     ? 'bg-white/5 border-white/10 hover:border-white/20'
                     : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-lg'
@@ -215,9 +237,13 @@ export default function LandingPage() {
                 key={i}
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
+                whileHover={{ x: 4 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }}
-                className="flex gap-4 items-start"
+                onMouseMove={trackPointer}
+                className={`interactive-card flex gap-4 items-start rounded-2xl px-3 py-3 ${
+                  dark ? 'hover:bg-white/5' : 'hover:bg-white/70'
+                }`}
               >
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 ${
                   dark
@@ -258,7 +284,7 @@ export default function LandingPage() {
             </p>
             <button
               onClick={() => dispatch({ type: 'CONNECT_WALLET' })}
-              className={`px-10 py-4 rounded-2xl text-lg font-bold transition-all transform hover:scale-105 ${
+              className={`btn-sheen px-10 py-4 rounded-2xl text-lg font-bold transition-all transform hover:scale-105 ${
                 dark
                   ? 'bg-gradient-to-r from-neon-cyan to-neon-green text-navy-950'
                   : 'bg-gradient-to-r from-mint-500 to-trust-600 text-white hover:shadow-lg'

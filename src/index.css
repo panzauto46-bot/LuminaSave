@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @theme {
@@ -24,12 +25,24 @@
   --color-neon-cyan: #00fff5;
 }
 
+:root {
+  --surface-glass-light: rgba(255, 255, 255, 0.72);
+  --surface-glass-dark: rgba(2, 6, 23, 0.7);
+  --spotlight-cyan: rgba(0, 255, 245, 0.3);
+  --spotlight-green: rgba(57, 255, 20, 0.26);
+}
+
 @layer base {
   * {
     @apply transition-colors duration-200;
   }
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: "Sora", "Segoe UI", sans-serif;
+    text-rendering: geometricPrecision;
+  }
+  h1, h2, h3, .font-display {
+    font-family: "Space Grotesk", "Segoe UI", sans-serif;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -46,6 +59,24 @@
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+
+@keyframes orb-drift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(20px, -26px, 0) scale(1.08);
+  }
+}
+
+@keyframes flow-x {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 240px 0;
+  }
 }
 
 .animate-pulse-glow {
@@ -65,6 +96,120 @@
 .glass-card {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+}
+
+.web3-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.web3-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(100, 116, 139, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(100, 116, 139, 0.12) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: radial-gradient(circle at center, black 35%, transparent 100%);
+}
+
+.web3-flow {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(0, 255, 245, 0.08) 45%,
+    rgba(57, 255, 20, 0.08) 55%,
+    transparent 100%
+  );
+  background-size: 240px 240px;
+  animation: flow-x 10s linear infinite;
+  opacity: 0.9;
+}
+
+.web3-orb {
+  position: absolute;
+  width: 28rem;
+  height: 28rem;
+  filter: blur(64px);
+  border-radius: 9999px;
+  opacity: 0.32;
+  animation: orb-drift 9s ease-in-out infinite;
+}
+
+.web3-orb--one {
+  top: -10rem;
+  right: -8rem;
+  background: radial-gradient(circle at center, rgba(0, 255, 245, 0.9), transparent 64%);
+}
+
+.web3-orb--two {
+  bottom: -12rem;
+  left: -9rem;
+  background: radial-gradient(circle at center, rgba(57, 255, 20, 0.75), transparent 64%);
+  animation-delay: 1.2s;
+}
+
+.interactive-card {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  --mx: 50%;
+  --my: 50%;
+}
+
+.interactive-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: radial-gradient(
+    240px circle at var(--mx) var(--my),
+    var(--spotlight-cyan) 0%,
+    transparent 60%
+  );
+  opacity: 0;
+  transition: opacity 0.26s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.interactive-card:hover::before {
+  opacity: 1;
+}
+
+.interactive-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -130%;
+  width: 42%;
+  height: 200%;
+  transform: skewX(-24deg);
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 100%
+  );
+  transition: left 0.62s ease;
+}
+
+.btn-sheen:hover::after {
+  left: 145%;
 }
 
 ::-webkit-scrollbar {

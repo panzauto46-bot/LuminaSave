@@ -1,17 +1,30 @@
 import { useApp } from '../context/AppContext';
 import { Plus, ArrowDownCircle, ArrowUpCircle, TrendingUp, Wallet, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
+import type { MouseEvent } from 'react';
 
 export default function Dashboard() {
   const { state, dispatch } = useApp();
   const dark = state.darkMode;
+  const trackPointer = (e: MouseEvent<HTMLElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    e.currentTarget.style.setProperty('--mx', `${x}%`);
+    e.currentTarget.style.setProperty('--my', `${y}%`);
+  };
 
   const totalBalance = state.goals.reduce((sum, g) => sum + g.currentAmount, 0);
   const totalYield = state.goals.reduce((sum, g) => sum + g.yieldEarned, 0);
   const totalTarget = state.goals.reduce((sum, g) => sum + g.targetAmount, 0);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div className="relative max-w-6xl mx-auto px-4 py-6 space-y-6 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 -z-10 opacity-70">
+        <div className={`absolute -top-28 right-8 w-80 h-80 rounded-full blur-3xl ${dark ? 'bg-neon-cyan/15' : 'bg-trust-200/40'}`} />
+        <div className={`absolute bottom-0 -left-24 w-72 h-72 rounded-full blur-3xl ${dark ? 'bg-neon-green/10' : 'bg-mint-200/45'}`} />
+      </div>
+
       {/* Greeting */}
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-2xl md:text-3xl font-bold">Welcome back! 👋</h1>
@@ -25,8 +38,10 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          whileHover={{ y: -4 }}
           transition={{ delay: 0.1 }}
-          className={`p-5 rounded-2xl border ${
+          onMouseMove={trackPointer}
+          className={`interactive-card p-5 rounded-2xl border ${
             dark
               ? 'bg-gradient-to-br from-navy-900 to-navy-950 border-white/10'
               : 'bg-white border-gray-200 shadow-sm'
@@ -53,8 +68,10 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          whileHover={{ y: -4 }}
           transition={{ delay: 0.2 }}
-          className={`p-5 rounded-2xl border ${
+          onMouseMove={trackPointer}
+          className={`interactive-card p-5 rounded-2xl border ${
             dark
               ? 'bg-gradient-to-br from-navy-900 to-navy-950 border-white/10'
               : 'bg-white border-gray-200 shadow-sm'
@@ -81,8 +98,10 @@ export default function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          whileHover={{ y: -4 }}
           transition={{ delay: 0.3 }}
-          className={`p-5 rounded-2xl border ${
+          onMouseMove={trackPointer}
+          className={`interactive-card p-5 rounded-2xl border ${
             dark
               ? 'bg-gradient-to-br from-navy-900 to-navy-950 border-white/10'
               : 'bg-white border-gray-200 shadow-sm'
@@ -130,7 +149,7 @@ export default function Dashboard() {
               dispatch({ type: 'OPEN_DEPOSIT', payload: state.goals[0].id });
             }
           }}
-          className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm transition-all hover:scale-105 ${
+          className={`btn-sheen flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm transition-all hover:scale-105 ${
             dark
               ? 'bg-gradient-to-r from-neon-cyan to-neon-green text-navy-950'
               : 'bg-gradient-to-r from-mint-500 to-trust-600 text-white shadow-md'
@@ -145,7 +164,7 @@ export default function Dashboard() {
               dispatch({ type: 'OPEN_REDEEM', payload: state.goals[0].id });
             }
           }}
-          className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm transition-all border-2 hover:scale-105 ${
+          className={`btn-sheen flex items-center gap-2 px-5 py-3 rounded-2xl font-semibold text-sm transition-all border-2 hover:scale-105 ${
             dark
               ? 'border-white/20 text-white hover:bg-white/10'
               : 'border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -181,8 +200,10 @@ export default function Dashboard() {
                 key={goal.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                whileHover={{ y: -5 }}
                 transition={{ delay: 0.1 * i }}
-                className={`rounded-2xl border overflow-hidden transition-all hover:scale-[1.02] ${
+                onMouseMove={trackPointer}
+                className={`interactive-card rounded-2xl border overflow-hidden transition-all hover:scale-[1.02] ${
                   dark
                     ? 'bg-navy-900 border-white/10 hover:border-white/20'
                     : 'bg-white border-gray-200 hover:shadow-lg'
