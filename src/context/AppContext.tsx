@@ -55,7 +55,7 @@ type PersistedState = Pick<AppState, 'darkMode' | 'goals' | 'transactions'>;
 
 const baseInitialState: AppState = {
   page: 'landing',
-  darkMode: false,
+  darkMode: true,
   connected: false,
   walletAddress: '',
   goals: initialGoals,
@@ -91,7 +91,7 @@ function loadInitialState(): AppState {
 
     return {
       ...baseInitialState,
-      darkMode: parsed.darkMode,
+      darkMode: true,
       goals: parsed.goals,
       transactions: parsed.transactions,
     };
