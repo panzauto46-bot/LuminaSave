@@ -17,17 +17,17 @@ export default function Header() {
         {/* Logo */}
         <button
           onClick={() => dispatch({ type: 'SET_PAGE', payload: connected ? 'dashboard' : 'landing' })}
-          className="flex items-center gap-2 group"
+          className="click-pulse flex items-center gap-2 group"
         >
           <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
             darkMode
-              ? 'bg-gradient-to-br from-neon-cyan to-neon-green'
-              : 'bg-gradient-to-br from-mint-500 to-trust-500'
+              ? 'bg-gradient-to-br from-gold-300 to-gold-500'
+              : 'bg-gradient-to-br from-gold-400 to-gold-600'
           }`}>
-            <Sparkles className="w-5 h-5 text-white" />
+            <Sparkles className={`w-5 h-5 ${darkMode ? 'text-navy-950' : 'text-white'}`} />
           </div>
           <span className="text-xl font-bold tracking-tight">
-            Lumina<span className={darkMode ? 'text-neon-cyan' : 'text-mint-600'}>Save</span>
+            Lumina<span className={darkMode ? 'text-gold-300' : 'text-gold-600'}>Save</span>
           </span>
         </button>
 
@@ -37,13 +37,13 @@ export default function Header() {
             <div className="hidden sm:flex items-center gap-1 mr-2">
               <button
                 onClick={() => dispatch({ type: 'SET_PAGE', payload: 'dashboard' })}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`click-pulse px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   page === 'dashboard'
                     ? darkMode
-                      ? 'bg-white/10 text-neon-cyan'
+                      ? 'bg-gold-500/15 text-gold-300'
                       : 'bg-mint-100 text-mint-700'
                     : darkMode
-                    ? 'text-gray-400 hover:text-white'
+                    ? 'text-gray-400 hover:text-gold-200'
                     : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
@@ -52,13 +52,13 @@ export default function Header() {
               </button>
               <button
                 onClick={() => dispatch({ type: 'SET_PAGE', payload: 'history' })}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`click-pulse px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                   page === 'history'
                     ? darkMode
-                      ? 'bg-white/10 text-neon-cyan'
+                      ? 'bg-gold-500/15 text-gold-300'
                       : 'bg-mint-100 text-mint-700'
                     : darkMode
-                    ? 'text-gray-400 hover:text-white'
+                    ? 'text-gray-400 hover:text-gold-200'
                     : 'text-gray-500 hover:text-gray-900'
                 }`}
               >
@@ -71,10 +71,10 @@ export default function Header() {
           {/* Dark mode toggle */}
           <button
             onClick={() => dispatch({ type: 'TOGGLE_DARK_MODE' })}
-            className={`p-2 rounded-xl transition-all ${
+            className={`click-pulse p-2 rounded-xl transition-all ${
               darkMode
-                ? 'bg-white/10 hover:bg-white/20 text-yellow-300'
-                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                ? 'bg-gold-500/15 hover:bg-gold-500/25 text-gold-300'
+                : 'bg-gold-50 hover:bg-gold-100 text-gold-700'
             }`}
             title={darkMode ? 'Light Mode' : 'Dark Mode'}
           >
@@ -94,7 +94,7 @@ export default function Header() {
               </div>
               <button
                 onClick={() => dispatch({ type: 'DISCONNECT_WALLET' })}
-                className={`p-2 rounded-xl transition-all ${
+                className={`click-pulse p-2 rounded-xl transition-all ${
                   darkMode
                     ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400'
                     : 'bg-red-50 hover:bg-red-100 text-red-500'
@@ -113,9 +113,9 @@ export default function Header() {
         <div className={`sm:hidden flex border-t ${darkMode ? 'border-white/10' : 'border-gray-100'}`}>
           <button
             onClick={() => dispatch({ type: 'SET_PAGE', payload: 'dashboard' })}
-            className={`flex-1 py-2 text-xs font-medium text-center ${
+            className={`click-pulse flex-1 py-2 text-xs font-medium text-center ${
               page === 'dashboard'
-                ? darkMode ? 'text-neon-cyan bg-white/5' : 'text-mint-600 bg-mint-50'
+                ? darkMode ? 'text-gold-300 bg-gold-500/10' : 'text-mint-600 bg-mint-50'
                 : darkMode ? 'text-gray-400' : 'text-gray-500'
             }`}
           >
@@ -123,9 +123,9 @@ export default function Header() {
           </button>
           <button
             onClick={() => dispatch({ type: 'SET_PAGE', payload: 'history' })}
-            className={`flex-1 py-2 text-xs font-medium text-center ${
+            className={`click-pulse flex-1 py-2 text-xs font-medium text-center ${
               page === 'history'
-                ? darkMode ? 'text-neon-cyan bg-white/5' : 'text-mint-600 bg-mint-50'
+                ? darkMode ? 'text-gold-300 bg-gold-500/10' : 'text-mint-600 bg-mint-50'
                 : darkMode ? 'text-gray-400' : 'text-gray-500'
             }`}
           >
