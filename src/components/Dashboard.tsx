@@ -11,6 +11,7 @@ import {
   Share2,
   ShieldCheck,
   Target,
+  Trash2,
   TrendingUp,
   Wallet,
 } from 'lucide-react';
@@ -123,6 +124,22 @@ export default function Dashboard() {
         id: `share-card-${Date.now()}`,
         title: 'Progress card downloaded',
         message: 'PNG card is ready to share in your demo or social post.',
+        type: 'success',
+      },
+    });
+  };
+
+  const handleDeleteGoal = (goalId: string, goalName: string) => {
+    const confirmed = window.confirm(`Delete pocket "${goalName}"? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    dispatch({ type: 'DELETE_GOAL', payload: goalId });
+    dispatch({
+      type: 'ADD_NOTIFICATION',
+      payload: {
+        id: `delete-goal-${Date.now()}`,
+        title: 'Pocket deleted',
+        message: `${goalName} has been removed.`,
         type: 'success',
       },
     });
@@ -423,6 +440,18 @@ export default function Dashboard() {
                           </span>
                         </div>
                       </div>
+                      <button
+                        onClick={() => handleDeleteGoal(goal.id, goal.name)}
+                        className={`click-pulse p-2 rounded-lg transition-all ${
+                          dark
+                            ? 'text-red-300 hover:bg-red-500/20'
+                            : 'text-red-600 hover:bg-red-50'
+                        }`}
+                        title="Delete pocket"
+                        aria-label={`Delete ${goal.name}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
 
                     <div className="mb-3">

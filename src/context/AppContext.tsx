@@ -83,6 +83,7 @@ type Action =
   | { type: 'UPDATE_NOTIFICATION'; payload: { id: string; patch: Partial<Pick<AppNotification, 'title' | 'message' | 'type'>> } }
   | { type: 'REMOVE_NOTIFICATION'; payload: string }
   | { type: 'ADD_GOAL'; payload: SavingsGoal }
+  | { type: 'DELETE_GOAL'; payload: string }
   | { type: 'DEPOSIT'; payload: { vaultId: SupportedVault; goalId: string; amount: number; txHash: string; network: Transaction['network'] } }
   | { type: 'REDEEM'; payload: { vaultId: SupportedVault; goalId: string; percentage: number; txHash: string; network: Transaction['network']; status?: Transaction['status']; requestId?: string } }
   | { type: 'UPDATE_TRANSACTION_STATUS'; payload: { id: string; status: Transaction['status'] } }
@@ -138,6 +139,22 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case 'ADD_GOAL':
       return { ...state, goals: [...state.goals, action.payload], page: 'dashboard' };
+    case 'DELETE_GOAL': {
+      const goalId = action.payload;
+      return {
+        ...state,
+        goals: state.goals.filter((goal) => goal.id !== goalId),
+        transactions: state.transactions.filter((tx) => tx.goalId !== goalId),
+        depositModal:
+          state.depositModal.goalId === goalId
+            ? { open: false, goalId: null }
+            : state.depositModal,
+        redeemModal:
+          state.redeemModal.goalId === goalId
+            ? { open: false, goalId: null }
+            : state.redeemModal,
+      };
+    }
     case 'DEPOSIT': {
       const { vaultId, goalId, amount, txHash, network } = action.payload;
       const updatedGoals = state.goals.map((g) =>
