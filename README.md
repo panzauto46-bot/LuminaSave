@@ -1,6 +1,8 @@
 # LuminaSave
 
 LuminaSave is a consumer-first DeFi savings app built for the YO SDK Hackathon.
+It follows the product positioning used on the landing page:
+**Smart DeFi Savings, Powered by YO Vaults.**
 
 Built by **Pandu Dargah**.
 
@@ -8,10 +10,10 @@ Built by **Pandu Dargah**.
 
 This project is designed to match the judging rubric:
 
-- UX Simplicity: goal-based savings flow, demo-ready empty states, one-click "Try on Base"
-- Creativity and Growth: savings pockets + proof panel + shareable progress card
+- UX Simplicity: goal-based pockets, demo-ready empty states, one-click Base onboarding
+- Creativity and Growth: proof panel + shareable progress card + clear savings journey
 - YO SDK Integration: live `approve/deposit/redeem` transaction paths
-- Risk and Trust: vault-specific risk page, fee breakdown, drawdown notes, explorer proof links
+- Risk and Trust: vault-specific risk page, fee breakdown, drawdown context, explorer proof links
 
 ## YO SDK Integration (Core Requirement)
 
@@ -39,11 +41,11 @@ Vault selector is available in header and auto-switches chain when vault-chain m
 
 ## Live Onchain Flows
 
-1. Connect wallet
-2. Choose vault (`yoUSD`, `yoETH`, `yoBTC`)
-3. Create savings goal
-4. Deposit with YO SDK (`depositWithApproval`)
-5. Redeem with YO SDK (`redeem`)
+1. Connect wallet or use `Try on Base`
+2. Choose vault (`yoUSD`, `yoETH`, `yoBTC`) and create a pocket
+3. Approve and deposit with YO SDK (`depositWithApproval`)
+4. Redeem with YO SDK (`redeem`)
+5. Track proof status in-app (`Confirmed`, `Queued`, `Failed`)
 6. If redeem is queued, app polls status until settlement
 
 ## Proof and Transparency
@@ -59,8 +61,9 @@ Vault selector is available in header and auto-switches chain when vault-chain m
 
 ## Demo-Ready Features
 
-- "Try on Base" button in hero section
+- "Start on Base in One Click" hero flow (`Try on Base`)
 - Empty states tailored for new wallets/accounts
+- Copy and onboarding tuned for 3-step demo flow
 - Share Progress Card (downloadable PNG for social/demo slides)
 
 ## Run Locally
