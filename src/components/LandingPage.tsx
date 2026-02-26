@@ -61,6 +61,7 @@ const runningMetrics = [
 export default function LandingPage() {
   const { state } = useApp();
   const dark = state.darkMode;
+  const currentYear = new Date().getFullYear();
   const { connectWallet, isConnecting } = useWalletActions();
   const prefersReducedMotion = useReducedMotion();
   const { scrollYProgress } = useScroll();
@@ -532,7 +533,7 @@ export default function LandingPage() {
           dark ? 'border-white/10 text-gray-500' : 'border-gray-200 text-gray-400'
         }`}
       >
-        <p>&copy; 2024 LuminaSave - Powered by YO Protocol. All rights reserved.</p>
+        <p>&copy; {currentYear} LuminaSave - Powered by YO Protocol. All rights reserved.</p>
       </footer>
     </div>
   );
