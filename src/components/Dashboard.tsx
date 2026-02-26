@@ -2,6 +2,7 @@ import { useApp } from '../context/AppContext';
 import { Plus, ArrowDownCircle, ArrowUpCircle, TrendingUp, Wallet, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { MouseEvent } from 'react';
+import { getGoalIconOption } from '../utils/goalIcons';
 
 export default function Dashboard() {
   const { state, dispatch } = useApp();
@@ -196,6 +197,8 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {state.goals.map((goal, i) => {
             const progress = Math.min(100, Math.round((goal.currentAmount / goal.targetAmount) * 100));
+            const iconOption = getGoalIconOption(goal.icon);
+            const GoalIcon = iconOption?.Icon;
             return (
               <motion.div
                 key={goal.id}
@@ -215,7 +218,15 @@ export default function Dashboard() {
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-3xl">{goal.icon}</span>
+                      {GoalIcon ? (
+                        <span className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+                          dark ? 'bg-gold-500/10 border border-gold-300/25' : 'bg-gold-50 border border-gold-200'
+                        }`}>
+                          <GoalIcon className={`w-5 h-5 ${dark ? iconOption?.darkClass : iconOption?.lightClass}`} />
+                        </span>
+                      ) : (
+                        <span className="text-3xl">{goal.icon}</span>
+                      )}
                       <div>
                         <h3 className="font-bold text-base">{goal.name}</h3>
                         <span className={`text-xs px-2 py-0.5 rounded-full ${

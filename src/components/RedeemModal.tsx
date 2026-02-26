@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatUnits } from 'viem';
 import { useAccount } from 'wagmi';
 import { useYoRuntime } from '../hooks/useYoRuntime';
+import { getGoalIconOption } from '../utils/goalIcons';
 
 function shortHash(hash: string) {
   if (!hash || hash.length < 16) return hash;
@@ -44,6 +45,8 @@ export default function RedeemModal() {
   const withdrawAmount = (goal.currentAmount * percentage) / 100;
   const yieldPortion = (goal.yieldEarned * percentage) / 100;
   const totalWithdraw = withdrawAmount + yieldPortion;
+  const goalIconOption = getGoalIconOption(goal.icon);
+  const GoalIcon = goalIconOption?.Icon;
 
   const handleConfirm = async () => {
     if (percentage <= 0) return;
@@ -248,9 +251,16 @@ export default function RedeemModal() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold">Withdraw / Redeem</h3>
-                  <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    {goal.icon} {goal.name}
-                  </p>
+                  <div className={`text-xs flex items-center gap-2 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {GoalIcon ? (
+                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                        dark ? 'bg-gold-500/10 border border-gold-300/20' : 'bg-gold-50 border border-gold-200'
+                      }`}>
+                        <GoalIcon className={`w-3.5 h-3.5 ${dark ? goalIconOption?.darkClass : goalIconOption?.lightClass}`} />
+                      </span>
+                    ) : null}
+                    <span>{goal.name}</span>
+                  </div>
                 </div>
               </div>
 

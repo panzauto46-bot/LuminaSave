@@ -5,7 +5,7 @@ const initialGoals: SavingsGoal[] = [
   {
     id: '1',
     name: 'Japan Vacation Fund',
-    icon: '🗾',
+    icon: 'travel',
     targetAmount: 5000,
     currentAmount: 2350,
     yieldEarned: 127.5,
@@ -17,7 +17,7 @@ const initialGoals: SavingsGoal[] = [
   {
     id: '2',
     name: 'New Laptop Fund',
-    icon: '💻',
+    icon: 'laptop',
     targetAmount: 2000,
     currentAmount: 1450,
     yieldEarned: 68.3,
@@ -29,7 +29,7 @@ const initialGoals: SavingsGoal[] = [
   {
     id: '3',
     name: 'Emergency Fund',
-    icon: '🛡️',
+    icon: 'safety',
     targetAmount: 10000,
     currentAmount: 4200,
     yieldEarned: 315.0,

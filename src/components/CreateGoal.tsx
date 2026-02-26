@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { ArrowLeft, Calculator, Sparkles } from 'lucide-react';
+import { ArrowLeft, Calculator, ShieldCheck, Sparkles, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { GOAL_ICON_OPTIONS } from '../utils/goalIcons';
 
-const ICONS = ['🎯', '🗾', '💻', '🚗', '🏠', '🎓', '🛡️', '✈️', '💍', '🎮', '📱', '🏖️'];
 const COLORS = [
   'from-pink-500 to-rose-500',
   'from-blue-500 to-indigo-500',
@@ -18,7 +18,7 @@ export default function CreateGoal() {
   const dark = state.darkMode;
 
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState('🎯');
+  const [icon, setIcon] = useState('target');
   const [target, setTarget] = useState('');
   const [monthly, setMonthly] = useState('');
   const [risk, setRisk] = useState<'low' | 'medium'>('low');
@@ -28,7 +28,6 @@ export default function CreateGoal() {
   const targetNum = parseFloat(target) || 0;
   const monthlyNum = parseFloat(monthly) || 0;
 
-  // Simple estimation: compound monthly
   let months = 0;
   if (monthlyNum > 0 && targetNum > 0) {
     let total = 0;
@@ -59,7 +58,6 @@ export default function CreateGoal() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Back */}
         <button
           onClick={() => dispatch({ type: 'SET_PAGE', payload: 'dashboard' })}
           className={`flex items-center gap-2 mb-6 text-sm font-medium ${
@@ -78,31 +76,49 @@ export default function CreateGoal() {
         <div className={`rounded-2xl border p-6 space-y-6 ${
           dark ? 'bg-navy-900 border-white/10' : 'bg-white border-gray-200 shadow-sm'
         }`}>
-          {/* Icon selection */}
           <div>
-            <label className="text-sm font-semibold mb-2 block">Choose Icon</label>
-            <div className="flex flex-wrap gap-2">
-              {ICONS.map((ic) => (
-                <button
-                  key={ic}
-                  onClick={() => setIcon(ic)}
-                  className={`w-11 h-11 rounded-xl text-xl flex items-center justify-center transition-all ${
-                    icon === ic
-                      ? dark
-                        ? 'bg-neon-cyan/20 ring-2 ring-neon-cyan'
-                        : 'bg-mint-100 ring-2 ring-mint-500'
-                      : dark
-                      ? 'bg-white/5 hover:bg-white/10'
-                      : 'bg-gray-100 hover:bg-gray-200'
-                  }`}
-                >
-                  {ic}
-                </button>
-              ))}
+            <label className="text-sm font-semibold mb-2 block">Choose Goal Icon</label>
+            <div className={`rounded-2xl border p-3 ${
+              dark ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'
+            }`}>
+              <div className="grid grid-cols-5 sm:grid-cols-6 gap-2">
+                {GOAL_ICON_OPTIONS.map((option) => {
+                  const Icon = option.Icon;
+                  const selected = icon === option.id;
+
+                  return (
+                    <button
+                      key={option.id}
+                      onClick={() => setIcon(option.id)}
+                      title={option.label}
+                      className={`w-full h-11 rounded-xl border flex items-center justify-center transition-all ${
+                        selected
+                          ? dark
+                            ? 'bg-gradient-to-br from-gold-300 to-gold-500 border-gold-200 shadow-lg shadow-gold-500/25'
+                            : 'bg-gradient-to-br from-gold-500 to-gold-600 border-gold-300 shadow-md'
+                          : dark
+                          ? 'bg-navy-900/70 border-white/10 hover:border-gold-300/35 hover:bg-navy-900'
+                          : 'bg-white border-gray-200 hover:border-gold-300 hover:bg-gold-50/40'
+                      }`}
+                    >
+                      <Icon
+                        className={`w-5 h-5 ${
+                          selected
+                            ? dark
+                              ? 'text-navy-950'
+                              : 'text-white'
+                            : dark
+                            ? option.darkClass
+                            : option.lightClass
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          {/* Name */}
           <div>
             <label className="text-sm font-semibold mb-2 block">Goal Name</label>
             <input
@@ -118,7 +134,6 @@ export default function CreateGoal() {
             />
           </div>
 
-          {/* Target amount */}
           <div>
             <label className="text-sm font-semibold mb-2 block">Target Amount (USD)</label>
             <div className="relative">
@@ -139,7 +154,6 @@ export default function CreateGoal() {
             </div>
           </div>
 
-          {/* Monthly deposit */}
           <div>
             <label className="text-sm font-semibold mb-2 block">Monthly Savings Plan (USD)</label>
             <div className="relative">
@@ -160,7 +174,6 @@ export default function CreateGoal() {
             </div>
           </div>
 
-          {/* Risk profile */}
           <div>
             <label className="text-sm font-semibold mb-2 block">YO Protocol Strategy (Risk Profile)</label>
             <div className="grid grid-cols-2 gap-3">
@@ -176,7 +189,7 @@ export default function CreateGoal() {
                     : 'border-gray-200 bg-gray-50'
                 }`}
               >
-                <div className="text-lg mb-1">🛡️</div>
+                <ShieldCheck className={`w-5 h-5 mb-1 ${dark ? 'text-neon-green' : 'text-mint-600'}`} />
                 <p className="font-bold text-sm">Low Risk</p>
                 <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
                   Stablecoin Vault
@@ -197,7 +210,7 @@ export default function CreateGoal() {
                     : 'border-gray-200 bg-gray-50'
                 }`}
               >
-                <div className="text-lg mb-1">⚡</div>
+                <Zap className={`w-5 h-5 mb-1 ${dark ? 'text-orange-400' : 'text-orange-600'}`} />
                 <p className="font-bold text-sm">Medium Risk</p>
                 <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
                   ETH/LST Vault
@@ -209,7 +222,6 @@ export default function CreateGoal() {
             </div>
           </div>
 
-          {/* Color selection */}
           <div>
             <label className="text-sm font-semibold mb-2 block">Card Color</label>
             <div className="flex gap-2">
@@ -225,7 +237,6 @@ export default function CreateGoal() {
             </div>
           </div>
 
-          {/* Calculator */}
           {monthlyNum > 0 && targetNum > 0 && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
@@ -254,7 +265,6 @@ export default function CreateGoal() {
             </motion.div>
           )}
 
-          {/* Submit */}
           <button
             onClick={handleSubmit}
             disabled={!name || !target}

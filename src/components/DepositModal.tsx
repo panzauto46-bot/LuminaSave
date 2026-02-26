@@ -275,7 +275,7 @@ export default function DepositModal() {
                 >
                   {state.goals.map((g) => (
                     <option key={g.id} value={g.id} className={dark ? 'bg-navy-950' : ''}>
-                      {g.icon} {g.name}
+                      {g.name}
                     </option>
                   ))}
                 </select>
