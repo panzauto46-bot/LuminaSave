@@ -137,7 +137,7 @@ export default function LandingPage() {
         <div className="web3-orb web3-orb--two" />
       </motion.div>
 
-      <section className="relative overflow-hidden min-h-[82vh] flex items-center">
+      <section className="relative overflow-hidden min-h-[76vh] md:min-h-[82vh] flex items-start md:items-center">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div
             className={`absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-20 ${
@@ -151,8 +151,8 @@ export default function LandingPage() {
           />
         </div>
 
-        <div className="max-w-6xl mx-auto px-4 py-20 md:py-32 relative z-10 w-full">
-          <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="max-w-6xl mx-auto px-4 py-16 md:py-32 relative z-10 w-full">
+          <div className="grid items-center gap-8 md:gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
@@ -174,7 +174,7 @@ export default function LandingPage() {
                 Powered by YO Protocol - Up to 12.5% APY
               </motion.div>
 
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 font-display">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 font-display">
                 Crypto Savings,{' '}
                 <span
                   className={`bg-clip-text text-transparent ${
@@ -196,7 +196,7 @@ export default function LandingPage() {
                 <button
                   onClick={handleWalletConnect}
                   disabled={isConnecting}
-                  className={`group click-pulse btn-sheen px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all transform hover:scale-105 ${
+                  className={`group click-pulse btn-sheen w-full sm:w-auto px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all transform hover:scale-105 ${
                     dark
                       ? 'bg-gradient-to-r from-gold-300 to-gold-500 text-navy-950 hover:shadow-lg hover:shadow-gold-500/35'
                       : 'bg-gradient-to-r from-gold-500 to-gold-600 text-white hover:shadow-lg hover:shadow-gold-500/30'
@@ -209,7 +209,7 @@ export default function LandingPage() {
                 <button
                   onClick={handleWalletConnect}
                   disabled={isConnecting}
-                  className={`click-pulse btn-sheen px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all border-2 ${
+                  className={`click-pulse btn-sheen w-full sm:w-auto px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all border-2 ${
                     dark
                       ? 'border-gold-300/30 text-gold-200 hover:bg-gold-500/10'
                       : 'border-gold-300 text-gold-700 hover:bg-gold-50'
@@ -230,7 +230,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
-              className="hidden lg:flex justify-end"
+              className="hidden xl:flex justify-end"
             >
               <motion.div className="hero-robot-scene" style={{ x: robotParallaxX, y: robotParallaxY }}>
                 <div className="hero-robot-glow" />
@@ -272,7 +272,7 @@ export default function LandingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.5 }}
           onClick={() => document.getElementById('trust-signals')?.scrollIntoView({ behavior: 'smooth' })}
-          className={`click-pulse absolute bottom-8 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-full text-xs font-semibold tracking-wide ${
+          className={`hidden md:inline-flex click-pulse absolute bottom-8 left-1/2 -translate-x-1/2 z-10 px-4 py-2 rounded-full text-xs font-semibold tracking-wide ${
             dark
               ? 'bg-white/10 text-gold-300 border border-gold-300/25'
               : 'bg-white/90 text-gold-700 border border-gold-200'

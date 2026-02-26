@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, ArrowUpCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { X, ArrowUpCircle, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function RedeemModal() {
@@ -10,7 +10,8 @@ export default function RedeemModal() {
   const goal = state.goals.find((g) => g.id === goalId);
 
   const [percentage, setPercentage] = useState(25);
-  const [step, setStep] = useState<'input' | 'loading' | 'success'>('input');
+  const [step, setStep] = useState<'input' | 'loading' | 'success' | 'failed'>('input');
+  const [errorMessage, setErrorMessage] = useState('');
 
   if (!open || !goal) return null;
 
@@ -20,13 +21,56 @@ export default function RedeemModal() {
 
   const handleConfirm = () => {
     if (percentage <= 0) return;
+
+    const noticeId = `n-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    dispatch({
+      type: 'ADD_NOTIFICATION',
+      payload: {
+        id: noticeId,
+        title: 'Withdrawal pending',
+        message: `Redeeming ${percentage}% from ${goal.name}.`,
+        type: 'pending',
+      },
+    });
+
     setStep('loading');
     setTimeout(() => {
+      const shouldFail = Math.random() < 0.1;
+      if (shouldFail) {
+        setStep('failed');
+        setErrorMessage('Vault liquidity is temporarily constrained. Please retry shortly.');
+        dispatch({
+          type: 'UPDATE_NOTIFICATION',
+          payload: {
+            id: noticeId,
+            patch: {
+              title: 'Withdrawal failed',
+              message: 'Network confirmation timed out in simulator.',
+              type: 'failed',
+            },
+          },
+        });
+        return;
+      }
+
       dispatch({ type: 'REDEEM', payload: { goalId: goal.id, percentage } });
       setStep('success');
+      dispatch({
+        type: 'UPDATE_NOTIFICATION',
+        payload: {
+          id: noticeId,
+          patch: {
+            title: 'Withdrawal success',
+            message: `$${totalWithdraw.toFixed(2)} withdrawn from ${goal.name}.`,
+            type: 'success',
+          },
+        },
+      });
+
       setTimeout(() => {
         setStep('input');
         setPercentage(25);
+        setErrorMessage('');
       }, 2000);
     }, 2500);
   };
@@ -34,6 +78,7 @@ export default function RedeemModal() {
   const handleClose = () => {
     setStep('input');
     setPercentage(25);
+    setErrorMessage('');
     dispatch({ type: 'CLOSE_REDEEM' });
   };
 
@@ -52,9 +97,7 @@ export default function RedeemModal() {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           className={`relative w-full max-w-md rounded-3xl border p-6 ${
-            dark
-              ? 'bg-navy-950 border-white/10 text-white'
-              : 'bg-white border-gray-200 text-gray-900'
+            dark ? 'bg-navy-950 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
           }`}
         >
           <button
@@ -73,11 +116,25 @@ export default function RedeemModal() {
               className="text-center py-8"
             >
               <CheckCircle2 className={`w-16 h-16 mx-auto mb-4 ${dark ? 'text-neon-green' : 'text-mint-500'}`} />
-              <h3 className="text-xl font-bold mb-2">Withdrawal Successful! 💸</h3>
+              <h3 className="text-xl font-bold mb-2">Withdrawal Confirmed</h3>
               <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
                 ${totalWithdraw.toFixed(2)} has been withdrawn from {goal.name}
               </p>
             </motion.div>
+          ) : step === 'failed' ? (
+            <div className="text-center py-10">
+              <AlertTriangle className={`w-14 h-14 mx-auto mb-3 ${dark ? 'text-red-400' : 'text-red-500'}`} />
+              <h3 className="text-lg font-bold mb-2">Withdrawal Failed</h3>
+              <p className={`text-sm mb-4 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>{errorMessage}</p>
+              <button
+                onClick={() => setStep('input')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+                  dark ? 'bg-white/10 hover:bg-white/15 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                }`}
+              >
+                Try Again
+              </button>
+            </div>
           ) : step === 'loading' ? (
             <div className="text-center py-12">
               <Loader2 className={`w-12 h-12 mx-auto mb-4 animate-spin ${dark ? 'text-neon-cyan' : 'text-mint-500'}`} />
@@ -101,9 +158,7 @@ export default function RedeemModal() {
           ) : (
             <>
               <div className="flex items-center gap-3 mb-6">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  dark ? 'bg-orange-500/20' : 'bg-orange-100'
-                }`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${dark ? 'bg-orange-500/20' : 'bg-orange-100'}`}>
                   <ArrowUpCircle className={`w-5 h-5 ${dark ? 'text-orange-400' : 'text-orange-600'}`} />
                 </div>
                 <div>
@@ -114,10 +169,7 @@ export default function RedeemModal() {
                 </div>
               </div>
 
-              {/* Current balance info */}
-              <div className={`rounded-xl p-4 mb-6 ${
-                dark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'
-              }`}>
+              <div className={`rounded-xl p-4 mb-6 ${dark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
                 <div className="flex justify-between text-sm mb-1">
                   <span className={dark ? 'text-gray-400' : 'text-gray-500'}>Current Balance</span>
                   <span className="font-bold">${goal.currentAmount.toFixed(2)}</span>
@@ -130,7 +182,6 @@ export default function RedeemModal() {
                 </div>
               </div>
 
-              {/* Percentage slider */}
               <div className="mb-6">
                 <label className="text-sm font-semibold mb-3 block">
                   Withdrawal Amount: <span className={`${dark ? 'text-neon-cyan' : 'text-mint-600'}`}>{percentage}%</span>
@@ -141,13 +192,12 @@ export default function RedeemModal() {
                   max={100}
                   step={1}
                   value={percentage}
-                  onChange={(e) => setPercentage(parseInt(e.target.value))}
+                  onChange={(e) => setPercentage(parseInt(e.target.value, 10))}
                   className="w-full h-2 rounded-full appearance-none cursor-pointer accent-mint-500"
                   style={{
-                    background: `linear-gradient(to right, ${dark ? '#00fff5' : '#22c55e'} ${percentage}%, ${dark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'} ${percentage}%)`
+                    background: `linear-gradient(to right, ${dark ? '#00fff5' : '#22c55e'} ${percentage}%, ${dark ? 'rgba(255,255,255,0.1)' : '#e5e7eb'} ${percentage}%)`,
                   }}
                 />
-                {/* Quick buttons */}
                 <div className="flex gap-2 mt-3">
                   {[25, 50, 75, 100].map((v) => (
                     <button
@@ -169,10 +219,7 @@ export default function RedeemModal() {
                 </div>
               </div>
 
-              {/* Breakdown */}
-              <div className={`rounded-xl p-4 mb-6 space-y-2 ${
-                dark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'
-              }`}>
+              <div className={`rounded-xl p-4 mb-6 space-y-2 ${dark ? 'bg-white/5 border border-white/10' : 'bg-gray-50 border border-gray-200'}`}>
                 <p className={`text-xs font-semibold mb-2 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
                   WITHDRAWAL BREAKDOWN
                 </p>
@@ -186,23 +233,18 @@ export default function RedeemModal() {
                     +${yieldPortion.toFixed(2)}
                   </span>
                 </div>
-                <div className={`border-t pt-2 flex justify-between font-bold ${
-                  dark ? 'border-white/10' : 'border-gray-200'
-                }`}>
+                <div className={`border-t pt-2 flex justify-between font-bold ${dark ? 'border-white/10' : 'border-gray-200'}`}>
                   <span>Total Withdrawn</span>
                   <span className="text-lg">${totalWithdraw.toFixed(2)}</span>
                 </div>
               </div>
 
-              {/* Confirm */}
               <button
                 onClick={handleConfirm}
                 disabled={percentage <= 0}
                 className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
                   percentage > 0
-                    ? dark
-                      ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg'
-                      : 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg'
+                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg'
                     : dark
                     ? 'bg-white/10 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'

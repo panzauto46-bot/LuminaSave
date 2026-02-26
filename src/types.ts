@@ -18,13 +18,20 @@ export interface Transaction {
   type: 'deposit' | 'withdraw';
   amount: number;
   yieldAmount?: number;
-  status: 'success' | 'pending';
+  status: 'success' | 'pending' | 'failed';
   date: string;
   txHash: string;
   network: 'Base' | 'Arbitrum' | 'Ethereum';
 }
 
-export type Page = 'landing' | 'dashboard' | 'create-goal' | 'history';
+export type Page = 'landing' | 'dashboard' | 'create-goal' | 'history' | 'risk';
+
+export interface AppNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'pending' | 'success' | 'failed';
+}
 
 export interface AppState {
   page: Page;
@@ -33,6 +40,7 @@ export interface AppState {
   walletAddress: string;
   goals: SavingsGoal[];
   transactions: Transaction[];
+  notifications: AppNotification[];
   depositModal: { open: boolean; goalId: string | null };
   redeemModal: { open: boolean; goalId: string | null };
 }

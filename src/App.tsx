@@ -4,8 +4,10 @@ import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import CreateGoal from './components/CreateGoal';
 import TransactionHistory from './components/TransactionHistory';
+import RiskTransparency from './components/RiskTransparency';
 import DepositModal from './components/DepositModal';
 import RedeemModal from './components/RedeemModal';
+import NotificationCenter from './components/NotificationCenter';
 import { ArrowUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useMotionValueEvent, useScroll, useSpring } from 'framer-motion';
@@ -108,12 +110,25 @@ function AppContent() {
               <TransactionHistory />
             </motion.section>
           )}
+          {page === 'risk' && (
+            <motion.section
+              key="risk"
+              variants={pageTransition}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={{ duration: 0.28, ease: 'easeOut' }}
+            >
+              <RiskTransparency />
+            </motion.section>
+          )}
         </AnimatePresence>
       </main>
 
       {/* Modals */}
       <DepositModal />
       <RedeemModal />
+      <NotificationCenter />
 
       <AnimatePresence>
         {showBackTop && (

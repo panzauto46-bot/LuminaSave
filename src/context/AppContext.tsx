@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useReducer, ReactNode } from 'react';
-import { AppState, Page, SavingsGoal, Transaction } from '../types';
+import { AppNotification, AppState, Page, SavingsGoal, Transaction } from '../types';
 
 const initialGoals: SavingsGoal[] = [
   {
@@ -60,6 +60,7 @@ const baseInitialState: AppState = {
   walletAddress: '',
   goals: initialGoals,
   transactions: initialTransactions,
+  notifications: [],
   depositModal: { open: false, goalId: null },
   redeemModal: { open: false, goalId: null },
 };
@@ -103,6 +104,9 @@ type Action =
   | { type: 'SET_PAGE'; payload: Page }
   | { type: 'TOGGLE_DARK_MODE' }
   | { type: 'SET_WALLET_STATE'; payload: { connected: boolean; walletAddress: string } }
+  | { type: 'ADD_NOTIFICATION'; payload: AppNotification }
+  | { type: 'UPDATE_NOTIFICATION'; payload: { id: string; patch: Partial<Pick<AppNotification, 'title' | 'message' | 'type'>> } }
+  | { type: 'REMOVE_NOTIFICATION'; payload: string }
   | { type: 'ADD_GOAL'; payload: SavingsGoal }
   | { type: 'DEPOSIT'; payload: { goalId: string; amount: number } }
   | { type: 'REDEEM'; payload: { goalId: string; percentage: number } }
@@ -124,6 +128,25 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, page: action.payload };
     case 'TOGGLE_DARK_MODE':
       return { ...state, darkMode: !state.darkMode };
+    case 'ADD_NOTIFICATION':
+      return {
+        ...state,
+        notifications: [action.payload, ...state.notifications].slice(0, 6),
+      };
+    case 'UPDATE_NOTIFICATION':
+      return {
+        ...state,
+        notifications: state.notifications.map((note) =>
+          note.id === action.payload.id
+            ? { ...note, ...action.payload.patch }
+            : note
+        ),
+      };
+    case 'REMOVE_NOTIFICATION':
+      return {
+        ...state,
+        notifications: state.notifications.filter((note) => note.id !== action.payload),
+      };
     case 'SET_WALLET_STATE': {
       if (action.payload.connected) {
         return {
@@ -138,6 +161,7 @@ function reducer(state: AppState, action: Action): AppState {
         connected: false,
         walletAddress: '',
         page: 'landing',
+        notifications: state.notifications,
         depositModal: { open: false, goalId: null },
         redeemModal: { open: false, goalId: null },
       };

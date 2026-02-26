@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { X, ArrowDownCircle, Loader2, CheckCircle2, Info } from 'lucide-react';
+import { X, ArrowDownCircle, Loader2, CheckCircle2, Info, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function DepositModal() {
@@ -11,7 +11,8 @@ export default function DepositModal() {
 
   const [amount, setAmount] = useState('');
   const [selectedGoal, setSelectedGoal] = useState(goalId || '');
-  const [step, setStep] = useState<'input' | 'loading' | 'success'>('input');
+  const [step, setStep] = useState<'input' | 'loading' | 'success' | 'failed'>('input');
+  const [errorMessage, setErrorMessage] = useState('');
 
   if (!open) return null;
 
@@ -22,13 +23,56 @@ export default function DepositModal() {
 
   const handleConfirm = () => {
     if (amountNum <= 0 || !activeGoal) return;
+
+    const noticeId = `n-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    dispatch({
+      type: 'ADD_NOTIFICATION',
+      payload: {
+        id: noticeId,
+        title: 'Deposit pending',
+        message: `Submitting $${amountNum.toFixed(2)} to ${activeGoal.name}.`,
+        type: 'pending',
+      },
+    });
+
     setStep('loading');
     setTimeout(() => {
+      const shouldFail = Math.random() < 0.12;
+      if (shouldFail) {
+        setStep('failed');
+        setErrorMessage('Network is busy. Please retry in a moment.');
+        dispatch({
+          type: 'UPDATE_NOTIFICATION',
+          payload: {
+            id: noticeId,
+            patch: {
+              title: 'Deposit failed',
+              message: 'Transaction was rejected by the network simulator.',
+              type: 'failed',
+            },
+          },
+        });
+        return;
+      }
+
       dispatch({ type: 'DEPOSIT', payload: { goalId: activeGoal.id, amount: amountNum } });
       setStep('success');
+      dispatch({
+        type: 'UPDATE_NOTIFICATION',
+        payload: {
+          id: noticeId,
+          patch: {
+            title: 'Deposit success',
+            message: `$${amountNum.toFixed(2)} deposited to ${activeGoal.name}.`,
+            type: 'success',
+          },
+        },
+      });
+
       setTimeout(() => {
         setStep('input');
         setAmount('');
+        setErrorMessage('');
       }, 2000);
     }, 2500);
   };
@@ -36,6 +80,7 @@ export default function DepositModal() {
   const handleClose = () => {
     setStep('input');
     setAmount('');
+    setErrorMessage('');
     dispatch({ type: 'CLOSE_DEPOSIT' });
   };
 
@@ -47,21 +92,16 @@ export default function DepositModal() {
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
-        {/* Backdrop */}
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
 
-        {/* Modal */}
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           className={`relative w-full max-w-md rounded-3xl border p-6 ${
-            dark
-              ? 'bg-navy-950 border-white/10 text-white'
-              : 'bg-white border-gray-200 text-gray-900'
+            dark ? 'bg-navy-950 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
           }`}
         >
-          {/* Close button */}
           <button
             onClick={handleClose}
             className={`absolute top-4 right-4 p-1 rounded-lg ${
@@ -78,11 +118,25 @@ export default function DepositModal() {
               className="text-center py-8"
             >
               <CheckCircle2 className={`w-16 h-16 mx-auto mb-4 ${dark ? 'text-neon-green' : 'text-mint-500'}`} />
-              <h3 className="text-xl font-bold mb-2">Successfully Saved! 🎉</h3>
+              <h3 className="text-xl font-bold mb-2">Deposit Confirmed</h3>
               <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
                 ${amountNum.toFixed(2)} has been deposited into {activeGoal?.name}
               </p>
             </motion.div>
+          ) : step === 'failed' ? (
+            <div className="text-center py-10">
+              <AlertTriangle className={`w-14 h-14 mx-auto mb-3 ${dark ? 'text-red-400' : 'text-red-500'}`} />
+              <h3 className="text-lg font-bold mb-2">Deposit Failed</h3>
+              <p className={`text-sm mb-4 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>{errorMessage}</p>
+              <button
+                onClick={() => setStep('input')}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+                  dark ? 'bg-white/10 hover:bg-white/15 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                }`}
+              >
+                Try Again
+              </button>
+            </div>
           ) : step === 'loading' ? (
             <div className="text-center py-12">
               <Loader2 className={`w-12 h-12 mx-auto mb-4 animate-spin ${dark ? 'text-neon-cyan' : 'text-mint-500'}`} />
@@ -109,20 +163,15 @@ export default function DepositModal() {
           ) : (
             <>
               <div className="flex items-center gap-3 mb-6">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  dark ? 'bg-neon-cyan/20' : 'bg-mint-100'
-                }`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${dark ? 'bg-neon-cyan/20' : 'bg-mint-100'}`}>
                   <ArrowDownCircle className={`w-5 h-5 ${dark ? 'text-neon-cyan' : 'text-mint-600'}`} />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold">Deposit</h3>
-                  <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Add funds to your savings pocket
-                  </p>
+                  <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Add funds to your savings pocket</p>
                 </div>
               </div>
 
-              {/* Goal selection */}
               <div className="mb-4">
                 <label className="text-sm font-semibold mb-2 block">Select Pocket</label>
                 <select
@@ -142,13 +191,10 @@ export default function DepositModal() {
                 </select>
               </div>
 
-              {/* Amount */}
               <div className="mb-4">
                 <label className="text-sm font-semibold mb-2 block">Amount (USDC)</label>
                 <div className="relative">
-                  <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold ${
-                    dark ? 'text-gray-500' : 'text-gray-400'
-                  }`}>$</span>
+                  <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold ${dark ? 'text-gray-500' : 'text-gray-400'}`}>$</span>
                   <input
                     type="number"
                     placeholder="0.00"
@@ -161,16 +207,13 @@ export default function DepositModal() {
                     }`}
                   />
                 </div>
-                {/* Quick amounts */}
                 <div className="flex gap-2 mt-2">
                   {[50, 100, 250, 500].map((v) => (
                     <button
                       key={v}
                       onClick={() => setAmount(v.toString())}
                       className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${
-                        dark
-                          ? 'bg-white/5 hover:bg-white/10 text-gray-300'
-                          : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                        dark ? 'bg-white/5 hover:bg-white/10 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
                       }`}
                     >
                       ${v}
@@ -179,7 +222,6 @@ export default function DepositModal() {
                 </div>
               </div>
 
-              {/* Fee breakdown */}
               {amountNum > 0 && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
@@ -202,16 +244,13 @@ export default function DepositModal() {
                     <span className={dark ? 'text-gray-400' : 'text-gray-500'}>Network Fee</span>
                     <span className="font-semibold">~${gasFee.toFixed(2)}</span>
                   </div>
-                  <div className={`border-t pt-2 flex justify-between text-sm font-bold ${
-                    dark ? 'border-white/10' : 'border-gray-200'
-                  }`}>
+                  <div className={`border-t pt-2 flex justify-between text-sm font-bold ${dark ? 'border-white/10' : 'border-gray-200'}`}>
                     <span>Total</span>
                     <span>${total.toFixed(2)}</span>
                   </div>
                 </motion.div>
               )}
 
-              {/* Confirm */}
               <button
                 onClick={handleConfirm}
                 disabled={amountNum <= 0}
