@@ -7,14 +7,32 @@ import TransactionHistory from './components/TransactionHistory';
 import DepositModal from './components/DepositModal';
 import RedeemModal from './components/RedeemModal';
 import { ArrowUp } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useMotionValueEvent, useScroll, useSpring } from 'framer-motion';
+import { useAccount } from 'wagmi';
 
 const pageTransition = {
   initial: { opacity: 0, y: 16, filter: 'blur(6px)' },
   animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
   exit: { opacity: 0, y: -12, filter: 'blur(6px)' },
 };
+
+function WalletStateSync() {
+  const { dispatch } = useApp();
+  const { address, isConnected } = useAccount();
+
+  useEffect(() => {
+    dispatch({
+      type: 'SET_WALLET_STATE',
+      payload: {
+        connected: isConnected,
+        walletAddress: address ?? '',
+      },
+    });
+  }, [address, dispatch, isConnected]);
+
+  return null;
+}
 
 function AppContent() {
   const { state } = useApp();
@@ -33,6 +51,8 @@ function AppContent() {
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-navy-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
+      <WalletStateSync />
+
       <div className={`scroll-progress-track ${darkMode ? 'bg-white/10' : 'bg-gold-100/50'}`}>
         <motion.div className="scroll-progress-bar" style={{ scaleX: smoothProgress }} />
       </div>

@@ -10,6 +10,7 @@ import {
   type Variants,
 } from 'framer-motion';
 import type { CSSProperties, MouseEvent } from 'react';
+import { useWalletActions } from '../hooks/useWalletActions';
 
 const sectionFade: Variants = {
   hidden: { opacity: 0, y: 24 },
@@ -58,8 +59,9 @@ const runningMetrics = [
 ];
 
 export default function LandingPage() {
-  const { state, dispatch } = useApp();
+  const { state } = useApp();
   const dark = state.darkMode;
+  const { connectWallet, isConnecting } = useWalletActions();
   const prefersReducedMotion = useReducedMotion();
   const { scrollYProgress } = useScroll();
 
@@ -96,6 +98,10 @@ export default function LandingPage() {
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     e.currentTarget.style.setProperty('--mx', `${x}%`);
     e.currentTarget.style.setProperty('--my', `${y}%`);
+  };
+
+  const handleWalletConnect = () => {
+    void connectWallet();
   };
 
   return (
@@ -188,24 +194,26 @@ export default function LandingPage() {
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                 <button
-                  onClick={() => dispatch({ type: 'CONNECT_WALLET' })}
+                  onClick={handleWalletConnect}
+                  disabled={isConnecting}
                   className={`group click-pulse btn-sheen px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all transform hover:scale-105 ${
                     dark
                       ? 'bg-gradient-to-r from-gold-300 to-gold-500 text-navy-950 hover:shadow-lg hover:shadow-gold-500/35'
                       : 'bg-gradient-to-r from-gold-500 to-gold-600 text-white hover:shadow-lg hover:shadow-gold-500/30'
-                  }`}
+                  } ${isConnecting ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
                   <Wallet className="w-5 h-5" />
-                  Connect Wallet
+                  {isConnecting ? 'Connecting...' : 'Connect Wallet'}
                   <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
                 <button
-                  onClick={() => dispatch({ type: 'CONNECT_WALLET' })}
+                  onClick={handleWalletConnect}
+                  disabled={isConnecting}
                   className={`click-pulse btn-sheen px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all border-2 ${
                     dark
                       ? 'border-gold-300/30 text-gold-200 hover:bg-gold-500/10'
                       : 'border-gold-300 text-gold-700 hover:bg-gold-50'
-                  }`}
+                  } ${isConnecting ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path fill={dark ? '#fff' : '#4285F4'} d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
@@ -505,14 +513,15 @@ export default function LandingPage() {
               Join now and experience the comfort of fintech + the power of DeFi.
             </p>
             <button
-              onClick={() => dispatch({ type: 'CONNECT_WALLET' })}
+              onClick={handleWalletConnect}
+              disabled={isConnecting}
               className={`click-pulse btn-sheen px-10 py-4 rounded-2xl text-lg font-bold transition-all transform hover:scale-105 ${
                 dark
                   ? 'bg-gradient-to-r from-gold-300 to-gold-500 text-navy-950'
                   : 'bg-gradient-to-r from-gold-500 to-gold-700 text-white hover:shadow-lg'
-              }`}
+              } ${isConnecting ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              Get Started - It's Free
+              {isConnecting ? 'Connecting...' : "Get Started - It's Free"}
             </button>
           </motion.div>
         </div>

@@ -1,9 +1,12 @@
 import { useApp } from '../context/AppContext';
 import { Sun, Moon, LogOut, History, Home, Sparkles } from 'lucide-react';
+import { useWalletActions } from '../hooks/useWalletActions';
 
 export default function Header() {
   const { state, dispatch } = useApp();
   const { darkMode, connected, walletAddress, page } = state;
+  const { disconnectWallet, isDisconnecting } = useWalletActions();
+  const formattedAddress = walletAddress ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}` : '';
 
   return (
     <header
@@ -90,15 +93,18 @@ export default function Header() {
                 }`}
               >
                 <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                {walletAddress}
+                {formattedAddress}
               </div>
               <button
-                onClick={() => dispatch({ type: 'DISCONNECT_WALLET' })}
+                onClick={() => {
+                  void disconnectWallet();
+                }}
+                disabled={isDisconnecting}
                 className={`click-pulse p-2 rounded-xl transition-all ${
                   darkMode
                     ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400'
                     : 'bg-red-50 hover:bg-red-100 text-red-500'
-                }`}
+                } ${isDisconnecting ? 'opacity-60 cursor-not-allowed' : ''}`}
                 title="Disconnect Wallet"
               >
                 <LogOut className="w-5 h-5" />

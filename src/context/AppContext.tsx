@@ -63,8 +63,7 @@ const initialState: AppState = {
 type Action =
   | { type: 'SET_PAGE'; payload: Page }
   | { type: 'TOGGLE_DARK_MODE' }
-  | { type: 'CONNECT_WALLET' }
-  | { type: 'DISCONNECT_WALLET' }
+  | { type: 'SET_WALLET_STATE'; payload: { connected: boolean; walletAddress: string } }
   | { type: 'ADD_GOAL'; payload: SavingsGoal }
   | { type: 'DEPOSIT'; payload: { goalId: string; amount: number } }
   | { type: 'REDEEM'; payload: { goalId: string; percentage: number } }
@@ -86,10 +85,24 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, page: action.payload };
     case 'TOGGLE_DARK_MODE':
       return { ...state, darkMode: !state.darkMode };
-    case 'CONNECT_WALLET':
-      return { ...state, connected: true, walletAddress: '0x1a2B...9cDe', page: 'dashboard' };
-    case 'DISCONNECT_WALLET':
-      return { ...state, connected: false, walletAddress: '', page: 'landing' };
+    case 'SET_WALLET_STATE': {
+      if (action.payload.connected) {
+        return {
+          ...state,
+          connected: true,
+          walletAddress: action.payload.walletAddress,
+          page: state.page === 'landing' ? 'dashboard' : state.page,
+        };
+      }
+      return {
+        ...state,
+        connected: false,
+        walletAddress: '',
+        page: 'landing',
+        depositModal: { open: false, goalId: null },
+        redeemModal: { open: false, goalId: null },
+      };
+    }
     case 'ADD_GOAL':
       return { ...state, goals: [...state.goals, action.payload], page: 'dashboard' };
     case 'DEPOSIT': {
