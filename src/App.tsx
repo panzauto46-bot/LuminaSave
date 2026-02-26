@@ -138,12 +138,18 @@ function AppContent() {
             exit={{ opacity: 0, y: 18, scale: 0.9 }}
             transition={{ duration: 0.2 }}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className={`click-pulse btn-sheen fixed bottom-5 right-5 z-50 w-11 h-11 rounded-full border flex items-center justify-center ${
+            className={`click-pulse btn-sheen fixed z-50 w-11 h-11 rounded-full border flex items-center justify-center ${
               darkMode
                 ? 'bg-gradient-to-br from-gold-300 to-gold-500 text-navy-950 border-gold-200/80 shadow-lg shadow-gold-500/25'
                 : 'bg-white text-gold-600 border-gold-300 shadow-lg shadow-gold-500/20'
             }`}
+            style={{
+              left: 'auto',
+              right: 'max(1rem, env(safe-area-inset-right))',
+              bottom: 'max(1rem, calc(env(safe-area-inset-bottom) + 0.75rem))',
+            }}
             title="Back to top"
+            aria-label="Back to top"
           >
             <ArrowUp className="w-5 h-5" />
           </motion.button>
