@@ -48,6 +48,15 @@ const dataPackets = [
   { left: 79, top: 54, delay: 2.6, width: 180 },
 ];
 
+const runningMetrics = [
+  'Real-time Yield Tracking',
+  'Auto Rebalance',
+  'Proof-of-Reserve On-Chain',
+  'Instant Deposit Route',
+  'Vault Risk Monitoring',
+  'YO Protocol Engine',
+];
+
 export default function LandingPage() {
   const { state, dispatch } = useApp();
   const dark = state.darkMode;
@@ -220,6 +229,28 @@ export default function LandingPage() {
         >
           Scroll to Explore
         </motion.button>
+      </section>
+
+      <section
+        className={`relative z-10 py-3 border-y ${
+          dark ? 'bg-navy-900/40 border-gold-300/15' : 'bg-white/75 border-gold-200/70'
+        }`}
+      >
+        <div className="running-strip-mask">
+          <div className="running-strip">
+            {[...runningMetrics, ...runningMetrics].map((item, index) => (
+              <span
+                key={`${item}-${index}`}
+                className={`running-pill ${
+                  dark ? 'text-gold-200 bg-gold-500/10 border-gold-300/20' : 'text-gold-700 bg-gold-50 border-gold-200'
+                }`}
+              >
+                <span className={`running-dot ${dark ? 'bg-gold-300' : 'bg-gold-500'}`} />
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
 
       <motion.section
