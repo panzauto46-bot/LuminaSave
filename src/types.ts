@@ -1,3 +1,7 @@
+import type { VaultId } from '@yo-protocol/core';
+
+export type SupportedVault = Extract<VaultId, 'yoUSD' | 'yoETH' | 'yoBTC'>;
+
 export interface SavingsGoal {
   id: string;
   name: string;
@@ -13,11 +17,13 @@ export interface SavingsGoal {
 
 export interface Transaction {
   id: string;
+  vaultId: SupportedVault;
   goalId: string;
   goalName: string;
   type: 'deposit' | 'withdraw';
   amount: number;
   yieldAmount?: number;
+  requestId?: string;
   status: 'success' | 'pending' | 'failed';
   date: string;
   txHash: string;
@@ -36,6 +42,7 @@ export interface AppNotification {
 export interface AppState {
   page: Page;
   darkMode: boolean;
+  selectedVault: SupportedVault;
   connected: boolean;
   walletAddress: string;
   goals: SavingsGoal[];

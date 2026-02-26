@@ -11,6 +11,7 @@ import {
 } from 'framer-motion';
 import type { CSSProperties, MouseEvent } from 'react';
 import { useWalletActions } from '../hooks/useWalletActions';
+import { useSwitchChain } from 'wagmi';
 
 const sectionFade: Variants = {
   hidden: { opacity: 0, y: 24 },
@@ -59,10 +60,11 @@ const runningMetrics = [
 ];
 
 export default function LandingPage() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const dark = state.darkMode;
   const currentYear = new Date().getFullYear();
   const { connectWallet, isConnecting } = useWalletActions();
+  const { switchChainAsync, isPending: isSwitchingChain } = useSwitchChain();
   const prefersReducedMotion = useReducedMotion();
   const { scrollYProgress } = useScroll();
 
@@ -103,6 +105,37 @@ export default function LandingPage() {
 
   const handleWalletConnect = () => {
     void connectWallet();
+  };
+
+  const handleTryOnBase = async () => {
+    dispatch({ type: 'SET_SELECTED_VAULT', payload: 'yoUSD' });
+
+    try {
+      if (!state.connected) {
+        await connectWallet();
+      }
+      await switchChainAsync({ chainId: 8453 });
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: `base-${Date.now()}`,
+          title: 'Demo mode ready',
+          message: 'Switched to Base with yoUSD selected. You can start live deposit flow now.',
+          type: 'success',
+        },
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to switch to Base network.';
+      dispatch({
+        type: 'ADD_NOTIFICATION',
+        payload: {
+          id: `base-failed-${Date.now()}`,
+          title: 'Switch to Base failed',
+          message,
+          type: 'failed',
+        },
+      });
+    }
   };
 
   return (
@@ -206,6 +239,19 @@ export default function LandingPage() {
                   <Wallet className="w-5 h-5" />
                   {isConnecting ? 'Connecting...' : 'Connect Wallet'}
                   <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+                <button
+                  onClick={() => {
+                    void handleTryOnBase();
+                  }}
+                  disabled={isConnecting || isSwitchingChain}
+                  className={`click-pulse btn-sheen w-full sm:w-auto px-8 py-4 rounded-2xl text-lg font-bold flex items-center justify-center gap-2 transition-all border-2 ${
+                    dark
+                      ? 'border-neon-cyan/35 text-neon-cyan hover:bg-neon-cyan/10'
+                      : 'border-trust-300 text-trust-700 hover:bg-trust-50'
+                  } ${(isConnecting || isSwitchingChain) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                >
+                  {isSwitchingChain ? 'Switching...' : 'Try on Base'}
                 </button>
                 <button
                   onClick={handleWalletConnect}

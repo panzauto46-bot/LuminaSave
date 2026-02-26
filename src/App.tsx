@@ -11,6 +11,16 @@ import NotificationCenter from './components/NotificationCenter';
 import { useEffect } from 'react';
 import { AnimatePresence, motion, useScroll, useSpring } from 'framer-motion';
 import { useAccount } from 'wagmi';
+import { createYoClient, VAULTS } from '@yo-protocol/core';
+import { createPublicClient, http, type Address } from 'viem';
+import { arbitrum, base, mainnet } from 'viem/chains';
+import { CHAIN_ID_BY_NAME } from './utils/vaults';
+
+const readonlyClients = {
+  1: createPublicClient({ chain: mainnet, transport: http() }),
+  8453: createPublicClient({ chain: base, transport: http() }),
+  42161: createPublicClient({ chain: arbitrum, transport: http() }),
+} as const;
 
 const pageTransition = {
   initial: { opacity: 0, y: 16, filter: 'blur(6px)' },
@@ -35,6 +45,76 @@ function WalletStateSync() {
   return null;
 }
 
+function PendingRedeemSync() {
+  const { state, dispatch } = useApp();
+  const { connected, walletAddress, transactions } = state;
+
+  useEffect(() => {
+    if (!connected || !walletAddress) return;
+
+    const pendingRedeems = transactions.filter((tx) => tx.type === 'withdraw' && tx.status === 'pending');
+    if (pendingRedeems.length === 0) return;
+
+    let active = true;
+
+    const toBigInt = (value: string | number | undefined) => {
+      if (value === undefined || value === null) return 0n;
+      try {
+        return BigInt(typeof value === 'number' ? Math.floor(value) : value);
+      } catch {
+        return 0n;
+      }
+    };
+
+    const poll = async () => {
+      for (const tx of pendingRedeems) {
+        const chainId = CHAIN_ID_BY_NAME[tx.network];
+        const client = createYoClient({
+          chainId,
+          publicClient: readonlyClients[chainId],
+        });
+
+        try {
+          const pending = await client.getPendingRedemptions(VAULTS[tx.vaultId].address, walletAddress as Address);
+          const pendingAssets = toBigInt(pending.assets?.raw);
+          const pendingShares = toBigInt(pending.shares?.raw);
+          const stillQueued = pendingAssets > 0n || pendingShares > 0n;
+
+          if (!stillQueued && active) {
+            dispatch({
+              type: 'UPDATE_TRANSACTION_STATUS',
+              payload: { id: tx.id, status: 'success' },
+            });
+            dispatch({
+              type: 'ADD_NOTIFICATION',
+              payload: {
+                id: `redeem-settled-${tx.id}-${Date.now()}`,
+                title: 'Queued redeem settled',
+                message: `${tx.goalName} withdrawal has been finalized on ${tx.network}.`,
+                type: 'success',
+              },
+            });
+          }
+        } catch {
+          // Ignore polling errors; next interval will retry.
+        }
+      }
+    };
+
+    void poll();
+    const timer = window.setInterval(() => {
+      void poll();
+    }, 25000);
+
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [connected, dispatch, transactions, walletAddress]);
+
+  return null;
+}
+
 function AppContent() {
   const { state } = useApp();
   const { page, darkMode } = state;
@@ -48,6 +128,7 @@ function AppContent() {
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-navy-950 text-white' : 'bg-gray-50 text-gray-900'}`}>
       <WalletStateSync />
+      <PendingRedeemSync />
 
       <div className={`scroll-progress-track ${darkMode ? 'bg-white/10' : 'bg-gold-100/50'}`}>
         <motion.div className="scroll-progress-bar" style={{ scaleX: smoothProgress }} />

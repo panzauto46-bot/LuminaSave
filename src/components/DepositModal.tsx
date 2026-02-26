@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { parseUnits } from 'viem';
 import { useAccount } from 'wagmi';
 import { useYoRuntime } from '../hooks/useYoRuntime';
+import { VAULT_UI_CONFIG } from '../utils/vaults';
 
 function shortHash(hash: string) {
   if (!hash || hash.length < 16) return hash;
@@ -31,9 +32,11 @@ export default function DepositModal() {
   const { state, dispatch } = useApp();
   const dark = state.darkMode;
   const { open, goalId } = state.depositModal;
+  const { selectedVault } = state;
   const goal = state.goals.find((g) => g.id === goalId);
   const { address } = useAccount();
-  const { client, network, vault, tokenAddress, tokenDecimals } = useYoRuntime('yoUSD');
+  const { client, network, vault, tokenAddress, tokenDecimals, tokenSymbol, isSelectedVaultSupportedOnChain } =
+    useYoRuntime(selectedVault);
 
   const [amount, setAmount] = useState('');
   const [selectedGoal, setSelectedGoal] = useState(goalId || '');
@@ -60,9 +63,9 @@ export default function DepositModal() {
       return;
     }
 
-    if (!client || !vault || !tokenAddress || !network) {
+    if (!isSelectedVaultSupportedOnChain || !client || !vault || !tokenAddress || !network) {
       setStep('failed');
-      setErrorMessage('YO vault is not ready on this network. Switch to Base, Arbitrum, or Ethereum.');
+      setErrorMessage('Selected vault is not available on this chain. Switch to the suggested chain first.');
       return;
     }
 
@@ -87,7 +90,7 @@ export default function DepositModal() {
       payload: {
         id: noticeId,
         title: 'Deposit pending',
-        message: `Submitting onchain deposit to ${activeGoal.name}...`,
+        message: `Submitting ${selectedVault} deposit to ${activeGoal.name}...`,
         type: 'pending',
       },
     });
@@ -110,8 +113,8 @@ export default function DepositModal() {
           patch: {
             title: 'Deposit submitted',
             message: approveHash
-              ? `Approve + deposit sent. Tx ${shortHash(depositHash)}`
-              : `Deposit sent. Tx ${shortHash(depositHash)}`,
+              ? `Approve + deposit sent on ${network}. Tx ${shortHash(depositHash)}`
+              : `Deposit sent on ${network}. Tx ${shortHash(depositHash)}`,
             type: 'pending',
           },
         },
@@ -140,6 +143,7 @@ export default function DepositModal() {
           type: 'DEPOSIT',
           payload: {
             goalId: activeGoal.id,
+            vaultId: selectedVault,
             amount: amountNum,
             txHash: depositHash,
             network,
@@ -258,7 +262,9 @@ export default function DepositModal() {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold">Deposit</h3>
-                  <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Add funds to your savings pocket</p>
+                  <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {VAULT_UI_CONFIG[selectedVault].short} ({tokenSymbol}) - {VAULT_UI_CONFIG[selectedVault].blurb}
+                  </p>
                 </div>
               </div>
 
@@ -282,7 +288,7 @@ export default function DepositModal() {
               </div>
 
               <div className="mb-4">
-                <label className="text-sm font-semibold mb-2 block">Amount (USDC)</label>
+                <label className="text-sm font-semibold mb-2 block">Amount ({tokenSymbol})</label>
                 <div className="relative">
                   <span className={`absolute left-4 top-1/2 -translate-y-1/2 font-bold ${dark ? 'text-gray-500' : 'text-gray-400'}`}>$</span>
                   <input

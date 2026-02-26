@@ -1,129 +1,94 @@
-# 🌟 LuminaSave
+# LuminaSave
 
-> **Crypto Savings Made Easy as Banking**
-> 
-> A seamless, intuitive, and secure decentralized application (dApp) that bridges the gap between traditional banking savings and DeFi yield-generating protocols.
+LuminaSave is a consumer-first DeFi savings app built for the YO SDK Hackathon.
 
-[![Web3](https://img.shields.io/badge/Web3-Ready-blue?style=for-the-badge&logo=web3.js)](https://lumina-save.vercel.app/)
-[![React](https://img.shields.io/badge/React-19.2-blue?style=for-the-badge&logo=react)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-7.2-purple?style=for-the-badge&logo=vite)](https://vitejs.dev/)
-[![TailwindCSS](https://img.shields.io/badge/Tailwind-4.1-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
-[![Yo Protocol](https://img.shields.io/badge/Yo_Protocol-Integrated-green?style=for-the-badge)](#)
+## Hackathon Fit
 
----
+This project is designed to match the judging rubric:
 
-## 📖 About The Project
+- UX Simplicity: goal-based savings flow, demo-ready empty states, one-click "Try on Base"
+- Creativity and Growth: savings pockets + proof panel + shareable progress card
+- YO SDK Integration: live `approve/deposit/redeem` transaction paths
+- Risk and Trust: vault-specific risk page, fee breakdown, drawdown notes, explorer proof links
 
-LuminaSave is a modern Web3 application built to make crypto savings management as accessible and straightforward as traditional web banking. By leveraging the **Yo Protocol** under the hood, LuminaSave allows users to create savings goals, deposit digital assets, and redeem them natively via on-chain smart contracts—all wrapped in a sleek, user-friendly, and responsive user interface.
+## YO SDK Integration (Core Requirement)
 
-### 🌟 Key Features
+LuminaSave uses `@yo-protocol/core` directly in runtime:
 
-- **🚀 Effortless Goal Creation**: Set custom, targeted savings goals with just a few clicks.
-- **🔗 Seamless Web3 Integration**: Connect your wallet easily using Wagmi and Viem.
-- **🏦 Real On-Chain Transactions**: True decentralized deposits and redemptions powered by [Yo Protocol](https://yoprotocol.io/).
-- **📊 Intuitive Dashboard**: Monitor your portfolio, track goal progresses, and manage your assets from a centralized dashboard.
-- **💡 Risk Transparency**: Clear upfront information on DeFi risks, making sure users are always informed before participating.
-- **🌗 Dark Mode Support**: Elegantly designed to support both light and dark themes using Tailwind CSS and Framer Motion.
+- `createYoClient(...)` for chain-specific read/write clients
+- `depositWithApproval(...)` for approve + deposit flow
+- `redeem(...)` and `waitForRedeemReceipt(...)` for withdraw/redeem flow
+- `getPendingRedemptions(...)` polling for queued redeem settlement
 
----
+Main files:
 
-## 🛠️ Technology Stack
+- `src/hooks/useYoRuntime.ts`
+- `src/components/DepositModal.tsx`
+- `src/components/RedeemModal.tsx`
+- `src/App.tsx` (`PendingRedeemSync`)
 
-| Category         | Technology / Libraries                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------|
-| **Frontend**     | React 19, TypeScript, Vite                                                              |
-| **Styling**      | Tailwind CSS v4, Framer Motion, Lucide React, clsx, tailwind-merge                      |
-| **Web3 & Crypto**| Wagmi, Viem, @yo-protocol/react, @yo-protocol/core                                      |
-| **State Mgt.**   | React Context API, React Query (@tanstack/react-query)                                  |
+## Supported Vaults and Chains
 
----
+- `yoUSD`: Base, Arbitrum, Ethereum
+- `yoETH`: Base, Ethereum
+- `yoBTC`: Base, Ethereum
 
-## 📂 Project Structure
+Vault selector is available in header and auto-switches chain when vault-chain mismatch is detected.
 
-A quick look at the core repository structure:
+## Live Onchain Flows
 
-```text
-LuminaSave/
-├── src/
-│   ├── components/         # UI Elements (Dashboard, Modals, Goals, Landing Page)
-│   ├── context/            # Application state management (AppContext)
-│   ├── hooks/              # Custom React Web3 & UI hooks
-│   ├── utils/              # Helper functions and formatters
-│   ├── wallet/             # Wagmi & Web3 wallet configurations
-│   ├── App.tsx             # Main React entry with animated page routing
-│   ├── index.css           # Global Styles & Tailwind directives
-│   ├── main.tsx            # Application mounting point
-│   └── types.ts            # Core TypeScript interfaces & definitions
-├── package.json            # Dependencies and scripts
-├── tsconfig.json           # TypeScript configuration
-└── vite.config.ts          # Vite bundler configuration
+1. Connect wallet
+2. Choose vault (`yoUSD`, `yoETH`, `yoBTC`)
+3. Create savings goal
+4. Deposit with YO SDK (`depositWithApproval`)
+5. Redeem with YO SDK (`redeem`)
+6. If redeem is queued, app polls status until settlement
+
+## Proof and Transparency
+
+- Dashboard includes "On-chain Proof Panel"
+- History page lists tx hash + explorer links + status (`Confirmed`, `Queued`, `Failed`)
+- CSV export available for history
+- Risk page is vault-specific:
+  - strategy notes
+  - fee breakdown
+  - worst drawdown snapshot
+  - contract/audit/reference links
+
+## Demo-Ready Features
+
+- "Try on Base" button in hero section
+- Empty states tailored for new wallets/accounts
+- Share Progress Card (downloadable PNG for social/demo slides)
+
+## Run Locally
+
+```bash
+npm install
+npm run dev
 ```
 
----
+Build:
 
-## 🚀 Getting Started
+```bash
+npm run build
+```
 
-To get a local copy up and running, follow these simple steps.
+## Submission Notes (DoraHacks)
 
-### Prerequisites
+For final submission include:
 
-- [Node.js](https://nodejs.org/) (v18 or higher recommended)
-- `npm`, `yarn`, or `pnpm` depending on your preference.
+- GitHub repo link
+- Vercel live link
+- 3-minute demo video
+- At least one real deposit tx hash
+- At least one real redeem tx hash
+- Brief explanation of YO SDK usage (see sections above)
 
-### Installation
+## Example Proof Format
 
-1. **Clone the repository** (if you haven't already):
-   ```bash
-   git clone https://github.com/panzauto46-bot/LuminaSave.git
-   cd LuminaSave
-   ```
+Use this format in submission text:
 
-2. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Start the development server**:
-   ```bash
-   npm run dev
-   ```
-
-4. **Build for production**:
-   ```bash
-   npm run build
-   ```
-
-5. **Preview production build locally**:
-   ```bash
-   npm run preview
-   ```
-
----
-
-## 🎨 Design & Animations
-
-LuminaSave utilizes **Framer Motion** extensively to provide a dynamic and fluid user experience. Page transitions, modal presentations, and scrolling progress indicators are meticulously animated to create a premium, "app-like" feel on the web.
-
----
-
-## 🤝 Contributing
-
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-<p align="center">
-  <i>Built with ❤️ for a better Web3 future.</i>
-</p>
+- Deposit tx (Base): `https://basescan.org/tx/<hash>`
+- Redeem tx (Base/Ethereum/Arbitrum): `https://.../tx/<hash>`
+- Optional queued redeem request id: `Request #<id>`

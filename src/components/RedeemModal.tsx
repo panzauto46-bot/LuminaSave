@@ -6,6 +6,7 @@ import { formatUnits } from 'viem';
 import { useAccount } from 'wagmi';
 import { useYoRuntime } from '../hooks/useYoRuntime';
 import { getGoalIconOption } from '../utils/goalIcons';
+import { VAULT_UI_CONFIG } from '../utils/vaults';
 
 function shortHash(hash: string) {
   if (!hash || hash.length < 16) return hash;
@@ -32,13 +33,16 @@ export default function RedeemModal() {
   const { state, dispatch } = useApp();
   const dark = state.darkMode;
   const { open, goalId } = state.redeemModal;
+  const { selectedVault } = state;
   const goal = state.goals.find((g) => g.id === goalId);
   const { address } = useAccount();
-  const { client, network, vault, tokenDecimals } = useYoRuntime('yoUSD');
+  const { client, network, vault, tokenDecimals, tokenSymbol, isSelectedVaultSupportedOnChain } =
+    useYoRuntime(selectedVault);
 
   const [percentage, setPercentage] = useState(25);
   const [step, setStep] = useState<'input' | 'loading' | 'success' | 'failed'>('input');
   const [errorMessage, setErrorMessage] = useState('');
+  const [queuedRequestId, setQueuedRequestId] = useState<string | null>(null);
 
   if (!open || !goal) return null;
 
@@ -57,9 +61,9 @@ export default function RedeemModal() {
       return;
     }
 
-    if (!client || !vault || !network) {
+    if (!isSelectedVaultSupportedOnChain || !client || !vault || !network) {
       setStep('failed');
-      setErrorMessage('YO vault is not ready on this network. Switch to Base, Arbitrum, or Ethereum.');
+      setErrorMessage('Selected vault is not available on this chain. Switch to a supported network first.');
       return;
     }
 
@@ -69,13 +73,14 @@ export default function RedeemModal() {
       payload: {
         id: noticeId,
         title: 'Withdrawal pending',
-        message: `Submitting redeem from ${goal.name}...`,
+        message: `Submitting ${selectedVault} redeem from ${goal.name}...`,
         type: 'pending',
       },
     });
 
     setStep('loading');
     setErrorMessage('');
+    setQueuedRequestId(null);
 
     try {
       const position = await client.getUserPosition(vault.address, address);
@@ -114,8 +119,10 @@ export default function RedeemModal() {
       const redeemedAssets = redeemReceipt.instant ? redeemReceipt.assetsOrRequestId : redeemTx.assets;
       const redeemedUsd = Number(formatUnits(redeemedAssets, tokenDecimals));
       const status = redeemReceipt.instant ? 'success' : 'pending';
+      const requestId = redeemReceipt.instant ? undefined : redeemReceipt.assetsOrRequestId.toString();
 
       setStep('success');
+      setQueuedRequestId(requestId ?? null);
       dispatch({
         type: 'UPDATE_NOTIFICATION',
         payload: {
@@ -135,15 +142,18 @@ export default function RedeemModal() {
           type: 'REDEEM',
           payload: {
             goalId: goal.id,
+            vaultId: selectedVault,
             percentage,
             txHash: redeemTx.hash,
             network,
             status,
+            requestId,
           },
         });
         setStep('input');
         setPercentage(25);
         setErrorMessage('');
+        setQueuedRequestId(null);
       }, 1300);
     } catch (error) {
       const message = formatErrorMessage(error);
@@ -167,6 +177,7 @@ export default function RedeemModal() {
     setStep('input');
     setPercentage(25);
     setErrorMessage('');
+    setQueuedRequestId(null);
     dispatch({ type: 'CLOSE_REDEEM' });
   };
 
@@ -204,9 +215,11 @@ export default function RedeemModal() {
               className="text-center py-8"
             >
               <CheckCircle2 className={`w-16 h-16 mx-auto mb-4 ${dark ? 'text-neon-green' : 'text-mint-500'}`} />
-              <h3 className="text-xl font-bold mb-2">Withdrawal Confirmed</h3>
+              <h3 className="text-xl font-bold mb-2">{queuedRequestId ? 'Withdrawal Queued' : 'Withdrawal Confirmed'}</h3>
               <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-                ${totalWithdraw.toFixed(2)} has been withdrawn from {goal.name}
+                {queuedRequestId
+                  ? `Request ${queuedRequestId} queued on ${network}. We will keep monitoring until settled.`
+                  : `${tokenSymbol} redeem completed from ${goal.name}.`}
               </p>
             </motion.div>
           ) : step === 'failed' ? (
@@ -259,7 +272,7 @@ export default function RedeemModal() {
                         <GoalIcon className={`w-3.5 h-3.5 ${dark ? goalIconOption?.darkClass : goalIconOption?.lightClass}`} />
                       </span>
                     ) : null}
-                    <span>{goal.name}</span>
+                    <span>{goal.name} - {VAULT_UI_CONFIG[selectedVault].short}</span>
                   </div>
                 </div>
               </div>

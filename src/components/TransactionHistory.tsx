@@ -1,29 +1,93 @@
-import { useApp } from '../context/AppContext';
-import { ArrowDownCircle, ArrowUpCircle, ExternalLink, Shield, Clock, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
+import {
+  AlertTriangle,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  CheckCircle2,
+  Clock,
+  Download,
+  ExternalLink,
+  Shield,
+} from 'lucide-react';
+import { useApp } from '../context/AppContext';
+import { getExplorerUrl } from '../utils/vaults';
+
+function escapeCsvField(value: string) {
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
 
 export default function TransactionHistory() {
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const dark = state.darkMode;
+  const hasTransactions = state.transactions.length > 0;
 
-  const getExplorerUrl = (network: string, hash: string) => {
-    const base: Record<string, string> = {
-      Base: 'https://basescan.org/tx/',
-      Arbitrum: 'https://arbiscan.io/tx/',
-      Ethereum: 'https://etherscan.io/tx/',
-    };
-    return `${base[network] || ''}${hash}`;
+  const exportCsv = () => {
+    const header = ['date', 'type', 'vault', 'goal', 'amount', 'yield', 'status', 'network', 'tx_hash', 'request_id'];
+    const body = state.transactions.map((tx) => [
+      tx.date,
+      tx.type,
+      tx.vaultId,
+      tx.goalName,
+      tx.amount.toFixed(2),
+      tx.yieldAmount?.toFixed(2) ?? '0.00',
+      tx.status,
+      tx.network,
+      tx.txHash,
+      tx.requestId ?? '',
+    ]);
+
+    const csv = [header, ...body]
+      .map((row) => row.map((cell) => escapeCsvField(cell)).join(','))
+      .join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `luminasave-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
+    dispatch({
+      type: 'ADD_NOTIFICATION',
+      payload: {
+        id: `csv-${Date.now()}`,
+        title: 'CSV exported',
+        message: 'Transaction history has been exported for audit/demo usage.',
+        type: 'success',
+      },
+    });
   };
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <div className="flex items-center gap-3 mb-2">
-          <Shield className={`w-6 h-6 ${dark ? 'text-neon-cyan' : 'text-trust-600'}`} />
-          <h1 className="text-2xl md:text-3xl font-bold">Transparency & History</h1>
+        <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
+          <div className="flex items-center gap-3">
+            <Shield className={`w-6 h-6 ${dark ? 'text-neon-cyan' : 'text-trust-600'}`} />
+            <h1 className="text-2xl md:text-3xl font-bold">Transparency & History</h1>
+          </div>
+          <button
+            onClick={exportCsv}
+            disabled={!hasTransactions}
+            className={`click-pulse btn-sheen px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+              hasTransactions
+                ? dark
+                  ? 'bg-white/10 text-gold-200 hover:bg-white/15'
+                  : 'bg-gold-50 text-gold-700 hover:bg-gold-100'
+                : dark
+                ? 'bg-white/5 text-gray-600 cursor-not-allowed'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            <Download className="w-4 h-4" />
+            Export .csv
+          </button>
         </div>
         <p className={`mb-8 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-          All transactions are recorded on the blockchain. Verify them yourself anytime.
+          Every transaction has on-chain proof. Use the explorer links below for independent verification.
         </p>
 
         <div
@@ -33,135 +97,144 @@ export default function TransactionHistory() {
         >
           <Shield className={`w-8 h-8 shrink-0 ${dark ? 'text-neon-cyan' : 'text-trust-600'}`} />
           <div>
-            <p className="font-bold text-sm">100% On-Chain & Verified</p>
+            <p className="font-bold text-sm">Proof Panel Sync</p>
             <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-              Every transaction has proof on the blockchain that you can check directly on the block explorer.
+              Queued withdrawals are tracked until settlement and reflected as confirmed once finalized.
             </p>
           </div>
         </div>
 
-        <div className="space-y-3">
-          {state.transactions.map((tx, i) => (
-            <motion.div
-              key={tx.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className={`rounded-2xl border p-4 transition-all hover:scale-[1.01] ${
-                dark ? 'bg-navy-900 border-white/10 hover:border-white/20' : 'bg-white border-gray-200 hover:shadow-md'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      tx.type === 'deposit'
-                        ? dark ? 'bg-neon-green/20' : 'bg-mint-100'
-                        : dark ? 'bg-orange-500/20' : 'bg-orange-100'
-                    }`}
-                  >
-                    {tx.type === 'deposit' ? (
-                      <ArrowDownCircle className={`w-5 h-5 ${dark ? 'text-neon-green' : 'text-mint-600'}`} />
-                    ) : (
-                      <ArrowUpCircle className={`w-5 h-5 ${dark ? 'text-orange-400' : 'text-orange-600'}`} />
-                    )}
-                  </div>
-
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm">
-                        {tx.type === 'deposit' ? 'Deposit' : 'Withdrawal'}
-                      </span>
-                      {tx.status === 'success' ? (
-                        <span
-                          className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                            dark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
-                          }`}
-                        >
-                          <CheckCircle2 className="w-3 h-3" />
-                          Success
-                        </span>
-                      ) : tx.status === 'failed' ? (
-                        <span
-                          className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                            dark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700'
-                          }`}
-                        >
-                          <AlertTriangle className="w-3 h-3" />
-                          Failed
-                        </span>
-                      ) : (
-                        <span
-                          className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-                            dark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
-                          }`}
-                        >
-                          <Clock className="w-3 h-3" />
-                          Pending
-                        </span>
-                      )}
-                    </div>
-                    <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {tx.goalName} - {tx.date}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="text-right">
-                  <p
-                    className={`font-bold ${
-                      tx.type === 'deposit'
-                        ? dark ? 'text-neon-green' : 'text-mint-600'
-                        : dark ? 'text-orange-400' : 'text-orange-600'
-                    }`}
-                  >
-                    {tx.type === 'deposit' ? '+' : '-'}${tx.amount.toFixed(2)}
-                  </p>
-                  {tx.yieldAmount && tx.yieldAmount > 0 && (
-                    <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-                      Yield: +${tx.yieldAmount.toFixed(2)}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div
-                className={`mt-3 pt-3 border-t flex flex-wrap items-center justify-between gap-2 ${
-                  dark ? 'border-white/5' : 'border-gray-100'
+        {hasTransactions ? (
+          <div className="space-y-3">
+            {state.transactions.map((tx, i) => (
+              <motion.div
+                key={tx.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className={`rounded-2xl border p-4 transition-all hover:scale-[1.01] ${
+                  dark ? 'bg-navy-900 border-white/10 hover:border-white/20' : 'bg-white border-gray-200 hover:shadow-md'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      dark ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {tx.network}
-                  </span>
-                  <span className={`text-xs font-mono ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
-                    {tx.txHash.length > 20 ? tx.txHash.slice(0, 10) + '...' + tx.txHash.slice(-6) : tx.txHash}
-                  </span>
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        tx.type === 'deposit' ? (dark ? 'bg-neon-green/20' : 'bg-mint-100') : dark ? 'bg-orange-500/20' : 'bg-orange-100'
+                      }`}
+                    >
+                      {tx.type === 'deposit' ? (
+                        <ArrowDownCircle className={`w-5 h-5 ${dark ? 'text-neon-green' : 'text-mint-600'}`} />
+                      ) : (
+                        <ArrowUpCircle className={`w-5 h-5 ${dark ? 'text-orange-400' : 'text-orange-600'}`} />
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-sm">{tx.type === 'deposit' ? 'Deposit' : 'Withdrawal'}</span>
+                        <span
+                          className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
+                            dark ? 'bg-white/5 text-gray-300' : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {tx.vaultId}
+                        </span>
+                        {tx.status === 'success' && (
+                          <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                            dark ? 'bg-green-500/20 text-green-400' : 'bg-green-100 text-green-700'
+                          }`}>
+                            <CheckCircle2 className="w-3 h-3" />
+                            Confirmed
+                          </span>
+                        )}
+                        {tx.status === 'pending' && (
+                          <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                            dark ? 'bg-yellow-500/20 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            <Clock className="w-3 h-3" />
+                            Queued
+                          </span>
+                        )}
+                        {tx.status === 'failed' && (
+                          <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+                            dark ? 'bg-red-500/20 text-red-400' : 'bg-red-100 text-red-700'
+                          }`}>
+                            <AlertTriangle className="w-3 h-3" />
+                            Failed
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {tx.goalName} - {tx.date}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <p
+                      className={`font-bold ${
+                        tx.type === 'deposit' ? (dark ? 'text-neon-green' : 'text-mint-600') : dark ? 'text-orange-400' : 'text-orange-600'
+                      }`}
+                    >
+                      {tx.type === 'deposit' ? '+' : '-'}${tx.amount.toFixed(2)}
+                    </p>
+                    {tx.yieldAmount && tx.yieldAmount > 0 && (
+                      <p className={`text-xs ${dark ? 'text-gray-400' : 'text-gray-500'}`}>Yield: +${tx.yieldAmount.toFixed(2)}</p>
+                    )}
+                  </div>
                 </div>
-                <a
-                  href={getExplorerUrl(tx.network, tx.txHash)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-lg transition-all ${
-                    dark ? 'bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20' : 'bg-trust-50 text-trust-600 hover:bg-trust-100'
+
+                <div
+                  className={`mt-3 pt-3 border-t flex flex-wrap items-center justify-between gap-2 ${
+                    dark ? 'border-white/5' : 'border-gray-100'
                   }`}
                 >
-                  <ExternalLink className="w-3 h-3" />
-                  View Proof on Block Explorer
-                </a>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        {state.transactions.length === 0 && (
-          <div className="text-center py-12">
-            <p className={`text-lg font-medium ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
-              No transaction history yet
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        dark ? 'bg-white/5 text-gray-400' : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {tx.network}
+                    </span>
+                    {tx.requestId && (
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          dark ? 'bg-yellow-500/20 text-yellow-300' : 'bg-yellow-100 text-yellow-700'
+                        }`}
+                      >
+                        Request #{tx.requestId}
+                      </span>
+                    )}
+                    <span className={`text-xs font-mono ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {tx.txHash.length > 20 ? `${tx.txHash.slice(0, 10)}...${tx.txHash.slice(-6)}` : tx.txHash}
+                    </span>
+                  </div>
+                  <a
+                    href={getExplorerUrl(tx.network, tx.txHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-lg transition-all ${
+                      dark ? 'bg-neon-cyan/10 text-neon-cyan hover:bg-neon-cyan/20' : 'bg-trust-50 text-trust-600 hover:bg-trust-100'
+                    }`}
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    View Proof
+                  </a>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div
+            className={`rounded-2xl border p-10 text-center ${
+              dark ? 'bg-navy-900 border-white/10' : 'bg-white border-gray-200'
+            }`}
+          >
+            <p className="text-lg font-semibold mb-2">No transaction history yet</p>
+            <p className={`${dark ? 'text-gray-400' : 'text-gray-500'} text-sm`}>
+              Start with a small deposit to generate your first on-chain proof for the demo video.
             </p>
           </div>
         )}
