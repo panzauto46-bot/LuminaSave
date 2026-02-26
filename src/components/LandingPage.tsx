@@ -209,7 +209,7 @@ export default function LandingPage() {
               </motion.div>
 
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 font-display">
-                Crypto Savings,{' '}
+                Smart DeFi Savings,{' '}
                 <span
                   className={`bg-clip-text text-transparent ${
                     dark
@@ -217,13 +217,13 @@ export default function LandingPage() {
                       : 'bg-gradient-to-r from-gold-500 to-gold-700'
                   }`}
                 >
-                  As Easy as Banking.
+                  Powered by YO Vaults.
                 </span>
               </h1>
 
               <p className={`text-lg md:text-xl max-w-2xl mx-auto lg:mx-0 mb-10 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
-                Set your savings goals, deposit your funds, and let DeFi work for you.
-                Transparent, secure, and real yield - straight from the blockchain.
+                Create pockets, choose yoUSD/yoETH/yoBTC, deposit on-chain, and monitor proof in real time.
+                Transparent, secure, and demo-ready.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -421,7 +421,7 @@ export default function LandingPage() {
           <motion.div variants={sectionFade} className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Why LuminaSave?</h2>
             <p className={`text-lg ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Combining fintech banking simplicity with the power of DeFi
+              Built for real onchain flows, proof, and vault-level transparency.
             </p>
           </motion.div>
 
@@ -435,22 +435,22 @@ export default function LandingPage() {
             {[
               {
                 icon: <Wallet className="w-7 h-7" />,
-                title: 'Goal-Based Savings',
-                desc: 'Create savings pockets like a digital bank. Vacation, laptop, emergency fund - organize your goals your way.',
+                title: 'Goal-Based Pockets',
+                desc: 'Create pockets like a digital bank and attach them to real YO vaults. Auto-switch chain when needed.',
                 gradient: dark ? 'from-neon-cyan/20 to-transparent' : 'from-trust-100 to-transparent',
                 iconColor: dark ? 'text-neon-cyan' : 'text-trust-600',
               },
               {
                 icon: <TrendingUp className="w-7 h-7" />,
-                title: 'Automatic DeFi Yield',
-                desc: 'Your money works 24/7 through YO Protocol Vaults. Earn yield without needing to understand complex DeFi.',
+                title: 'Live YO SDK Yield',
+                desc: 'Approve, deposit, and redeem live on Base, Arbitrum, and Ethereum with YO SDK.',
                 gradient: dark ? 'from-gold-500/20 to-transparent' : 'from-gold-100 to-transparent',
                 iconColor: dark ? 'text-gold-300' : 'text-gold-600',
               },
               {
                 icon: <Lock className="w-7 h-7" />,
-                title: '100% Transparent On-Chain',
-                desc: 'Every transaction is recorded on the blockchain. Verify it yourself on the block explorer anytime.',
+                title: 'Proof & Risk Transparency',
+                desc: 'Proof panel, explorer links, and vault-specific risk and fee breakdowns.',
                 gradient: dark ? 'from-trust-500/20 to-transparent' : 'from-trust-100 to-transparent',
                 iconColor: dark ? 'text-trust-300' : 'text-trust-600',
               },
@@ -493,7 +493,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4">
           <motion.div variants={sectionFade} className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
-            <p className={`text-lg ${dark ? 'text-gray-400' : 'text-gray-600'}`}>As easy as 1-2-3</p>
+            <p className={`text-lg ${dark ? 'text-gray-400' : 'text-gray-600'}`}>Three steps, real onchain</p>
           </motion.div>
 
           <motion.div
@@ -504,9 +504,9 @@ export default function LandingPage() {
             className="space-y-8"
           >
             {[
-              { step: '1', title: 'Connect Your Wallet', desc: 'Connect MetaMask, WalletConnect, or login with Google. Just 1 click.' },
-              { step: '2', title: 'Set a Goal & Deposit', desc: 'Name your savings target, set the amount you want to save, and start depositing USDC/ETH.' },
-              { step: '3', title: 'Sit Back & Earn Yield', desc: 'YO Protocol Vault works for you. Monitor your yield in real-time, withdraw anytime.' },
+              { step: '1', title: 'Connect Wallet or Try on Base', desc: 'Connect MetaMask or use Try on Base for the fastest demo-ready flow.' },
+              { step: '2', title: 'Select Vault & Deposit', desc: 'Pick yoUSD/yoETH/yoBTC, approve, and deposit on-chain.' },
+              { step: '3', title: 'Redeem & Track Proof', desc: 'Queued redeems are tracked until success with explorer links.' },
             ].map((s, i) => (
               <motion.div
                 key={i}
@@ -555,20 +555,22 @@ export default function LandingPage() {
             }`}
           >
             <Zap className={`w-12 h-12 mx-auto mb-4 ${dark ? 'text-gold-300' : 'text-gold-500'}`} />
-            <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to Start Saving the New Way?</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-4">Start on Base in One Click</h2>
             <p className={`mb-8 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>
-              Join now and experience the comfort of fintech + the power of DeFi.
+              Demo-ready: yoUSD selected, Base chain active, and proof tracking enabled.
             </p>
             <button
-              onClick={handleWalletConnect}
-              disabled={isConnecting}
+              onClick={() => {
+                void handleTryOnBase();
+              }}
+              disabled={isConnecting || isSwitchingChain}
               className={`click-pulse btn-sheen px-10 py-4 rounded-2xl text-lg font-bold transition-all transform hover:scale-105 ${
                 dark
                   ? 'bg-gradient-to-r from-gold-300 to-gold-500 text-navy-950'
                   : 'bg-gradient-to-r from-gold-500 to-gold-700 text-white hover:shadow-lg'
-              } ${isConnecting ? 'opacity-70 cursor-not-allowed' : ''}`}
+              } ${(isConnecting || isSwitchingChain) ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              {isConnecting ? 'Connecting...' : "Get Started - It's Free"}
+              {isSwitchingChain ? 'Switching...' : 'Start on Base (Demo Ready)'}
             </button>
           </motion.div>
         </div>
@@ -584,3 +586,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
