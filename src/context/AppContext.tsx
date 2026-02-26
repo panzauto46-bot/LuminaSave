@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useReducer, ReactNode } from 'react';
 import { AppState, Page, SavingsGoal, Transaction } from '../types';
 
 const initialGoals: SavingsGoal[] = [
@@ -49,7 +49,11 @@ const initialTransactions: Transaction[] = [
   { id: 't6', goalId: '3', goalName: 'Emergency Fund', type: 'deposit', amount: 500, status: 'success', date: '2024-10-25', txHash: '0xaaa111bbb222ccc...', network: 'Base' },
 ];
 
-const initialState: AppState = {
+const STORAGE_KEY = 'luminasave:state:v1';
+
+type PersistedState = Pick<AppState, 'darkMode' | 'goals' | 'transactions'>;
+
+const baseInitialState: AppState = {
   page: 'landing',
   darkMode: false,
   connected: false,
@@ -59,6 +63,41 @@ const initialState: AppState = {
   depositModal: { open: false, goalId: null },
   redeemModal: { open: false, goalId: null },
 };
+
+function isValidPersistedState(value: unknown): value is PersistedState {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.darkMode === 'boolean' &&
+    Array.isArray(candidate.goals) &&
+    Array.isArray(candidate.transactions)
+  );
+}
+
+function loadInitialState(): AppState {
+  if (typeof window === 'undefined') {
+    return baseInitialState;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return baseInitialState;
+    const parsed = JSON.parse(raw) as unknown;
+
+    if (!isValidPersistedState(parsed)) {
+      return baseInitialState;
+    }
+
+    return {
+      ...baseInitialState,
+      darkMode: parsed.darkMode,
+      goals: parsed.goals,
+      transactions: parsed.transactions,
+    };
+  } catch {
+    return baseInitialState;
+  }
+}
 
 type Action =
   | { type: 'SET_PAGE'; payload: Page }
@@ -165,7 +204,23 @@ function reducer(state: AppState, action: Action): AppState {
 const AppContext = createContext<{ state: AppState; dispatch: React.Dispatch<Action> } | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, undefined, loadInitialState);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const payload: PersistedState = {
+      darkMode: state.darkMode,
+      goals: state.goals,
+      transactions: state.transactions,
+    };
+
+    try {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // Ignore storage write failures to keep UI functional.
+    }
+  }, [state.darkMode, state.goals, state.transactions]);
+
   return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
 }
 
