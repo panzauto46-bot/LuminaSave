@@ -1,11 +1,12 @@
 import { createYoClient, isSupportedChain, type SupportedChainId, type VaultConfig } from '@yo-protocol/core';
 import { useMemo } from 'react';
-import type { Address, PublicClient, WalletClient } from 'viem';
+import type { Address } from 'viem';
 import { useChainId, usePublicClient, useWalletClient } from 'wagmi';
 import type { SupportedVault, Transaction } from '../types';
 import { CHAIN_NAME_BY_ID, getPreferredChainForVault, getSupportedChainsForVault, isChainSupportedByVault } from '../utils/vaults';
 
 const DEFAULT_VAULT_ID: SupportedVault = 'yoUSD';
+type YoClientConfig = Parameters<typeof createYoClient>[0];
 
 export interface YoRuntime {
   chainId: number;
@@ -32,8 +33,9 @@ export function useYoRuntime(vaultId: SupportedVault = DEFAULT_VAULT_ID): YoRunt
     if (!supportedChainId || !publicClient) return null;
     return createYoClient({
       chainId: supportedChainId,
-      publicClient: publicClient as PublicClient,
-      walletClient: walletClient as WalletClient | undefined,
+      // The YO SDK pins viem 2.44.2 internally; cast bridges equivalent runtime clients.
+      publicClient: publicClient as unknown as YoClientConfig['publicClient'],
+      walletClient: walletClient as unknown as YoClientConfig['walletClient'],
     });
   }, [supportedChainId, publicClient, walletClient]);
 

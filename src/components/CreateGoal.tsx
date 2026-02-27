@@ -27,6 +27,10 @@ export default function CreateGoal() {
   const apyRate = risk === 'low' ? 0.085 : 0.125;
   const targetNum = parseFloat(target) || 0;
   const monthlyNum = parseFloat(monthly) || 0;
+  const hasValidName = name.trim().length > 0;
+  const isTargetValid = Number.isFinite(targetNum) && targetNum > 0;
+  const isMonthlyValid = Number.isFinite(monthlyNum) && monthlyNum >= 0;
+  const isFormValid = hasValidName && isTargetValid && isMonthlyValid;
 
   let months = 0;
   if (monthlyNum > 0 && targetNum > 0) {
@@ -39,10 +43,12 @@ export default function CreateGoal() {
   }
 
   const handleSubmit = () => {
-    if (!name || !target) return;
+    if (!isFormValid) return;
+
+    const normalizedName = name.trim();
     const newGoal = {
       id: `g${Date.now()}`,
-      name,
+      name: normalizedName,
       icon,
       targetAmount: targetNum,
       currentAmount: 0,
@@ -142,6 +148,8 @@ export default function CreateGoal() {
               }`}>$</span>
               <input
                 type="number"
+                min="0"
+                step="0.01"
                 placeholder="2,000"
                 value={target}
                 onChange={(e) => setTarget(e.target.value)}
@@ -162,6 +170,8 @@ export default function CreateGoal() {
               }`}>$</span>
               <input
                 type="number"
+                min="0"
+                step="0.01"
                 placeholder="100"
                 value={monthly}
                 onChange={(e) => setMonthly(e.target.value)}
@@ -267,9 +277,9 @@ export default function CreateGoal() {
 
           <button
             onClick={handleSubmit}
-            disabled={!name || !target}
+            disabled={!isFormValid}
             className={`w-full py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 transition-all ${
-              name && target
+              isFormValid
                 ? dark
                   ? 'bg-gradient-to-r from-neon-cyan to-neon-green text-navy-950 hover:shadow-lg hover:shadow-neon-cyan/30 hover:scale-[1.02]'
                   : 'bg-gradient-to-r from-mint-500 to-trust-600 text-white hover:shadow-lg hover:scale-[1.02]'

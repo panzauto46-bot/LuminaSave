@@ -214,15 +214,35 @@ function reducer(state: AppState, action: Action): AppState {
         redeemModal: { open: false, goalId: null },
       };
     }
-    case 'UPDATE_TRANSACTION_STATUS':
+    case 'UPDATE_TRANSACTION_STATUS': {
+      const targetTx = state.transactions.find((tx) => tx.id === action.payload.id);
+      const shouldApplyQueuedRedeem =
+        targetTx?.type === 'withdraw' &&
+        targetTx.status === 'pending' &&
+        action.payload.status === 'success';
+
+      const updatedGoals = shouldApplyQueuedRedeem && targetTx
+        ? state.goals.map((goal) =>
+            goal.id === targetTx.goalId
+              ? {
+                  ...goal,
+                  currentAmount: Math.max(0, goal.currentAmount - targetTx.amount),
+                  yieldEarned: Math.max(0, goal.yieldEarned - (targetTx.yieldAmount ?? 0)),
+                }
+              : goal
+          )
+        : state.goals;
+
       return {
         ...state,
+        goals: updatedGoals,
         transactions: state.transactions.map((tx) =>
           tx.id === action.payload.id
             ? { ...tx, status: action.payload.status }
             : tx
         ),
       };
+    }
     case 'OPEN_DEPOSIT':
       return { ...state, depositModal: { open: true, goalId: action.payload } };
     case 'CLOSE_DEPOSIT':

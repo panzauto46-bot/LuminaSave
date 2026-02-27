@@ -16,6 +16,9 @@ import { createPublicClient, http, type Address } from 'viem';
 import { arbitrum, base, mainnet } from 'viem/chains';
 import { CHAIN_ID_BY_NAME } from './utils/vaults';
 
+type YoClientConfig = Parameters<typeof createYoClient>[0];
+type YoPublicClient = YoClientConfig['publicClient'];
+
 const readonlyClients = {
   1: createPublicClient({ chain: mainnet, transport: http() }),
   8453: createPublicClient({ chain: base, transport: http() }),
@@ -71,7 +74,9 @@ function PendingRedeemSync() {
         const chainId = CHAIN_ID_BY_NAME[tx.network];
         const client = createYoClient({
           chainId,
-          publicClient: readonlyClients[chainId],
+          // The YO SDK currently ships with a pinned viem version (2.44.2),
+          // while app-level wagmi/viem may be newer. Cast keeps runtime-safe clients usable.
+          publicClient: readonlyClients[chainId] as unknown as YoPublicClient,
         });
 
         try {
