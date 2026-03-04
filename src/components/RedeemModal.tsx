@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { X, ArrowUpCircle, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { formatUnits } from 'viem';
 import { useAccount } from 'wagmi';
+import { useRedeem, useUserPosition } from '@yo-protocol/react';
 import { useYoRuntime } from '../hooks/useYoRuntime';
 import { getGoalIconOption } from '../utils/goalIcons';
 import { VAULT_UI_CONFIG } from '../utils/vaults';
@@ -36,13 +36,92 @@ export default function RedeemModal() {
   const { selectedVault } = state;
   const goal = state.goals.find((g) => g.id === goalId);
   const { address } = useAccount();
-  const { client, network, vault, tokenDecimals, tokenSymbol, isSelectedVaultSupportedOnChain } =
+  const { network, tokenSymbol, isSelectedVaultSupportedOnChain } =
     useYoRuntime(selectedVault);
 
+  const { position } = useUserPosition(selectedVault);
+
   const [percentage, setPercentage] = useState(25);
-  const [step, setStep] = useState<'input' | 'loading' | 'success' | 'failed'>('input');
+  const [uiStep, setUiStep] = useState<'input' | 'loading' | 'success' | 'failed'>('input');
   const [errorMessage, setErrorMessage] = useState('');
   const [queuedRequestId, setQueuedRequestId] = useState<string | null>(null);
+
+  const noticeIdRef = { current: '' };
+
+  const { redeem, step, instant, assetsOrRequestId, reset } = useRedeem({
+    vault: selectedVault,
+    onSubmitted: (h) => {
+      dispatch({
+        type: 'UPDATE_NOTIFICATION',
+        payload: {
+          id: noticeIdRef.current,
+          patch: {
+            title: 'Withdrawal submitted',
+            message: `Redeem tx sent: ${shortHash(h)}`,
+            type: 'pending',
+          },
+        },
+      });
+    },
+    onConfirmed: (h) => {
+      const isInstant = instant !== false;
+      const requestId = !isInstant && assetsOrRequestId ? assetsOrRequestId.toString() : undefined;
+
+      setUiStep('success');
+      setQueuedRequestId(requestId ?? null);
+      dispatch({
+        type: 'UPDATE_NOTIFICATION',
+        payload: {
+          id: noticeIdRef.current,
+          patch: {
+            title: isInstant ? 'Withdrawal success' : 'Withdrawal queued',
+            message: isInstant
+              ? `${tokenSymbol} redeemed from ${goal?.name ?? 'goal'} on ${network}.`
+              : `Redeem request queued on ${network}. Request ID: ${requestId}.`,
+            type: isInstant ? 'success' : 'pending',
+          },
+        },
+      });
+
+      window.setTimeout(() => {
+        if (goal) {
+          dispatch({
+            type: 'REDEEM',
+            payload: {
+              goalId: goal.id,
+              vaultId: selectedVault,
+              percentage,
+              txHash: h,
+              network: network!,
+              status: isInstant ? 'success' : 'pending',
+              requestId,
+            },
+          });
+        }
+        setUiStep('input');
+        setPercentage(25);
+        setErrorMessage('');
+        setQueuedRequestId(null);
+        reset();
+      }, 1300);
+    },
+    onError: (e) => {
+      const message = formatErrorMessage(e);
+      setUiStep('failed');
+      setErrorMessage(message);
+      dispatch({
+        type: 'UPDATE_NOTIFICATION',
+        payload: {
+          id: noticeIdRef.current,
+          patch: {
+            title: 'Withdrawal failed',
+            message,
+            type: 'failed',
+          },
+        },
+      });
+    },
+  });
 
   if (!open || !goal) return null;
 
@@ -56,18 +135,19 @@ export default function RedeemModal() {
     if (percentage <= 0) return;
 
     if (!state.connected || !address) {
-      setStep('failed');
+      setUiStep('failed');
       setErrorMessage('Please connect wallet before redeeming.');
       return;
     }
 
-    if (!isSelectedVaultSupportedOnChain || !client || !vault || !network) {
-      setStep('failed');
+    if (!isSelectedVaultSupportedOnChain || !network) {
+      setUiStep('failed');
       setErrorMessage('Selected vault is not available on this chain. Switch to a supported network first.');
       return;
     }
 
     const noticeId = `n-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+    noticeIdRef.current = noticeId;
     dispatch({
       type: 'ADD_NOTIFICATION',
       payload: {
@@ -78,108 +158,54 @@ export default function RedeemModal() {
       },
     });
 
-    setStep('loading');
+    setUiStep('loading');
     setErrorMessage('');
     setQueuedRequestId(null);
 
     try {
-      const position = await client.getUserPosition(vault.address, address);
-      if (position.shares <= 0n) {
+      // Get user shares from either useUserPosition or fallback to 0n
+      const userShares = position?.shares ?? 0n;
+
+      if (userShares <= 0n) {
         throw new Error('No YO vault shares found for this wallet on current chain.');
       }
 
-      const sharesToRedeem = (position.shares * BigInt(percentage)) / 100n;
+      const sharesToRedeem = (userShares * BigInt(percentage)) / 100n;
       if (sharesToRedeem <= 0n) {
         throw new Error('Redeem amount is too small. Increase percentage.');
       }
 
-      const redeemTx = await client.redeem({
-        vault: vault.address,
-        shares: sharesToRedeem,
-        recipient: address,
-      });
-
-      dispatch({
-        type: 'UPDATE_NOTIFICATION',
-        payload: {
-          id: noticeId,
-          patch: {
-            title: 'Withdrawal submitted',
-            message: `Redeem tx sent: ${shortHash(redeemTx.hash)}`,
-            type: 'pending',
-          },
-        },
-      });
-
-      const redeemReceipt = await client.waitForRedeemReceipt(redeemTx.hash);
-      if (redeemReceipt.status !== 'success') {
-        throw new Error('Redeem transaction reverted onchain.');
-      }
-
-      const redeemedAssets = redeemReceipt.instant ? redeemReceipt.assetsOrRequestId : redeemTx.assets;
-      const redeemedUsd = Number(formatUnits(redeemedAssets, tokenDecimals));
-      const status = redeemReceipt.instant ? 'success' : 'pending';
-      const requestId = redeemReceipt.instant ? undefined : redeemReceipt.assetsOrRequestId.toString();
-
-      setStep('success');
-      setQueuedRequestId(requestId ?? null);
-      dispatch({
-        type: 'UPDATE_NOTIFICATION',
-        payload: {
-          id: noticeId,
-          patch: {
-            title: redeemReceipt.instant ? 'Withdrawal success' : 'Withdrawal queued',
-            message: redeemReceipt.instant
-              ? `$${redeemedUsd.toFixed(2)} redeemed from ${goal.name} on ${network}.`
-              : `Redeem request queued on ${network}. Request ID: ${redeemReceipt.assetsOrRequestId.toString()}.`,
-            type: redeemReceipt.instant ? 'success' : 'pending',
-          },
-        },
-      });
-
-      window.setTimeout(() => {
+      await redeem(sharesToRedeem);
+    } catch (err) {
+      if (uiStep !== 'failed') {
+        const message = formatErrorMessage(err);
+        setUiStep('failed');
+        setErrorMessage(message);
         dispatch({
-          type: 'REDEEM',
+          type: 'UPDATE_NOTIFICATION',
           payload: {
-            goalId: goal.id,
-            vaultId: selectedVault,
-            percentage,
-            txHash: redeemTx.hash,
-            network,
-            status,
-            requestId,
+            id: noticeIdRef.current,
+            patch: {
+              title: 'Withdrawal failed',
+              message,
+              type: 'failed',
+            },
           },
         });
-        setStep('input');
-        setPercentage(25);
-        setErrorMessage('');
-        setQueuedRequestId(null);
-      }, 1300);
-    } catch (error) {
-      const message = formatErrorMessage(error);
-      setStep('failed');
-      setErrorMessage(message);
-      dispatch({
-        type: 'UPDATE_NOTIFICATION',
-        payload: {
-          id: noticeId,
-          patch: {
-            title: 'Withdrawal failed',
-            message,
-            type: 'failed',
-          },
-        },
-      });
+      }
     }
   };
 
   const handleClose = () => {
-    setStep('input');
+    setUiStep('input');
     setPercentage(25);
     setErrorMessage('');
     setQueuedRequestId(null);
+    reset();
     dispatch({ type: 'CLOSE_REDEEM' });
   };
+
+  const stepLabel = step === 'approving' ? 'Approving shares...' : step === 'redeeming' ? 'Processing withdrawal...' : step === 'waiting' ? 'Waiting for confirmation...' : 'Processing...';
 
   return (
     <AnimatePresence>
@@ -195,20 +221,18 @@ export default function RedeemModal() {
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className={`relative w-full max-w-md rounded-3xl border p-6 ${
-            dark ? 'bg-navy-950 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
-          }`}
+          className={`relative w-full max-w-md rounded-3xl border p-6 ${dark ? 'bg-navy-950 border-white/10 text-white' : 'bg-white border-gray-200 text-gray-900'
+            }`}
         >
           <button
             onClick={handleClose}
-            className={`absolute top-4 right-4 p-1 rounded-lg ${
-              dark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
-            }`}
+            className={`absolute top-4 right-4 p-1 rounded-lg ${dark ? 'hover:bg-white/10 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
+              }`}
           >
             <X className="w-5 h-5" />
           </button>
 
-          {step === 'success' ? (
+          {uiStep === 'success' ? (
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -222,37 +246,38 @@ export default function RedeemModal() {
                   : `${tokenSymbol} redeem completed from ${goal.name}.`}
               </p>
             </motion.div>
-          ) : step === 'failed' ? (
+          ) : uiStep === 'failed' ? (
             <div className="text-center py-10">
               <AlertTriangle className={`w-14 h-14 mx-auto mb-3 ${dark ? 'text-red-400' : 'text-red-500'}`} />
               <h3 className="text-lg font-bold mb-2">Withdrawal Failed</h3>
               <p className={`text-sm mb-4 ${dark ? 'text-gray-400' : 'text-gray-600'}`}>{errorMessage}</p>
               <button
-                onClick={() => setStep('input')}
-                className={`px-4 py-2 rounded-xl text-sm font-semibold ${
-                  dark ? 'bg-white/10 hover:bg-white/15 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                }`}
+                onClick={() => { setUiStep('input'); reset(); }}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold ${dark ? 'bg-white/10 hover:bg-white/15 text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  }`}
               >
                 Try Again
               </button>
             </div>
-          ) : step === 'loading' ? (
+          ) : uiStep === 'loading' ? (
             <div className="text-center py-12">
               <Loader2 className={`w-12 h-12 mx-auto mb-4 animate-spin ${dark ? 'text-neon-cyan' : 'text-mint-500'}`} />
               <h3 className="text-lg font-bold mb-2">Processing Withdrawal...</h3>
               <p className={`text-sm ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
-                Smart contract redeem is being executed.
+                {stepLabel}
+              </p>
+              <p className={`text-xs mt-2 ${dark ? 'text-gray-500' : 'text-gray-400'}`}>
+                Step: {step}
               </p>
               <div className={`mt-4 w-full h-1.5 rounded-full overflow-hidden ${dark ? 'bg-white/10' : 'bg-gray-200'}`}>
                 <motion.div
                   initial={{ width: '0%' }}
                   animate={{ width: '100%' }}
                   transition={{ duration: 2.5 }}
-                  className={`h-full rounded-full ${
-                    dark
-                      ? 'bg-gradient-to-r from-neon-cyan to-neon-green'
-                      : 'bg-gradient-to-r from-mint-500 to-trust-500'
-                  }`}
+                  className={`h-full rounded-full ${dark
+                    ? 'bg-gradient-to-r from-neon-cyan to-neon-green'
+                    : 'bg-gradient-to-r from-mint-500 to-trust-500'
+                    }`}
                 />
               </div>
             </div>
@@ -266,9 +291,8 @@ export default function RedeemModal() {
                   <h3 className="text-lg font-bold">Withdraw / Redeem</h3>
                   <div className={`text-xs flex items-center gap-2 ${dark ? 'text-gray-400' : 'text-gray-500'}`}>
                     {GoalIcon ? (
-                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                        dark ? 'bg-gold-500/10 border border-gold-300/20' : 'bg-gold-50 border border-gold-200'
-                      }`}>
+                      <span className={`w-6 h-6 rounded-lg flex items-center justify-center ${dark ? 'bg-gold-500/10 border border-gold-300/20' : 'bg-gold-50 border border-gold-200'
+                        }`}>
                         <GoalIcon className={`w-3.5 h-3.5 ${dark ? goalIconOption?.darkClass : goalIconOption?.lightClass}`} />
                       </span>
                     ) : null}
@@ -311,15 +335,14 @@ export default function RedeemModal() {
                     <button
                       key={v}
                       onClick={() => setPercentage(v)}
-                      className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                        percentage === v
-                          ? dark
-                            ? 'bg-neon-cyan/20 text-neon-cyan ring-1 ring-neon-cyan'
-                            : 'bg-mint-100 text-mint-700 ring-1 ring-mint-400'
-                          : dark
+                      className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${percentage === v
+                        ? dark
+                          ? 'bg-neon-cyan/20 text-neon-cyan ring-1 ring-neon-cyan'
+                          : 'bg-mint-100 text-mint-700 ring-1 ring-mint-400'
+                        : dark
                           ? 'bg-white/5 text-gray-400 hover:bg-white/10'
                           : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                      }`}
+                        }`}
                     >
                       {v}%
                     </button>
@@ -350,13 +373,12 @@ export default function RedeemModal() {
               <button
                 onClick={handleConfirm}
                 disabled={percentage <= 0}
-                className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
-                  percentage > 0
-                    ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg'
-                    : dark
+                className={`w-full py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all ${percentage > 0
+                  ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white hover:shadow-lg'
+                  : dark
                     ? 'bg-white/10 text-gray-500 cursor-not-allowed'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                }`}
+                  }`}
               >
                 <ArrowUpCircle className="w-5 h-5" />
                 Confirm Withdrawal

@@ -1,12 +1,11 @@
-import { createYoClient, isSupportedChain, type SupportedChainId, type VaultConfig } from '@yo-protocol/core';
+import { createYoClient, VAULTS, isSupportedChain, type SupportedChainId } from '@yo-protocol/core';
 import { useMemo } from 'react';
 import type { Address } from 'viem';
-import { useChainId, usePublicClient, useWalletClient } from 'wagmi';
+import { useChainId, usePublicClient } from 'wagmi';
 import type { SupportedVault, Transaction } from '../types';
 import { CHAIN_NAME_BY_ID, getPreferredChainForVault, getSupportedChainsForVault, isChainSupportedByVault } from '../utils/vaults';
 
 const DEFAULT_VAULT_ID: SupportedVault = 'yoUSD';
-type YoClientConfig = Parameters<typeof createYoClient>[0];
 
 export interface YoRuntime {
   chainId: number;
@@ -16,7 +15,7 @@ export interface YoRuntime {
   supportedVaultChains: SupportedChainId[];
   isSelectedVaultSupportedOnChain: boolean;
   client: ReturnType<typeof createYoClient> | null;
-  vault: VaultConfig | null;
+  vault: (typeof VAULTS)[SupportedVault] | null;
   tokenAddress: Address | null;
   tokenSymbol: string;
   tokenDecimals: number;
@@ -25,7 +24,6 @@ export interface YoRuntime {
 export function useYoRuntime(vaultId: SupportedVault = DEFAULT_VAULT_ID): YoRuntime {
   const chainId = useChainId();
   const publicClient = usePublicClient();
-  const { data: walletClient } = useWalletClient();
 
   const supportedChainId = isSupportedChain(chainId) ? chainId : null;
 
@@ -33,20 +31,19 @@ export function useYoRuntime(vaultId: SupportedVault = DEFAULT_VAULT_ID): YoRunt
     if (!supportedChainId || !publicClient) return null;
     return createYoClient({
       chainId: supportedChainId,
-      // The YO SDK pins viem 2.44.2 internally; cast bridges equivalent runtime clients.
-      publicClient: publicClient as unknown as YoClientConfig['publicClient'],
-      walletClient: walletClient as unknown as YoClientConfig['walletClient'],
+      partnerId: 9999,
+      publicClients: {
+        [supportedChainId]: publicClient as any,
+      },
     });
-  }, [supportedChainId, publicClient, walletClient]);
+  }, [supportedChainId, publicClient]);
 
-  const vault = useMemo(() => {
-    if (!client) return null;
-    return client.getVaults().find((item) => item.symbol === vaultId) ?? null;
-  }, [client, vaultId]);
+  const vault = VAULTS[vaultId] ?? null;
 
-  const tokenAddress = useMemo(() => {
+  const tokenAddress = useMemo((): Address | null => {
     if (!vault || !supportedChainId) return null;
-    return vault.underlying.address[supportedChainId];
+    const addr = vault.underlying.address[supportedChainId];
+    return addr ?? null;
   }, [vault, supportedChainId]);
 
   return {
@@ -58,7 +55,7 @@ export function useYoRuntime(vaultId: SupportedVault = DEFAULT_VAULT_ID): YoRunt
     isSelectedVaultSupportedOnChain: isChainSupportedByVault(vaultId, chainId),
     client,
     vault,
-    tokenAddress: tokenAddress ?? null,
+    tokenAddress,
     tokenSymbol: vault?.underlying.symbol ?? 'USDC',
     tokenDecimals: vault?.underlying.decimals ?? 6,
   };

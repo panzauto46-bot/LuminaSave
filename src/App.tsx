@@ -11,19 +11,16 @@ import NotificationCenter from './components/NotificationCenter';
 import { useEffect } from 'react';
 import { AnimatePresence, motion, useScroll, useSpring } from 'framer-motion';
 import { useAccount } from 'wagmi';
-import { createYoClient, VAULTS } from '@yo-protocol/core';
+import { createYoClient, VAULTS, type SupportedChainId } from '@yo-protocol/core';
 import { createPublicClient, http, type Address } from 'viem';
 import { arbitrum, base, mainnet } from 'viem/chains';
 import { CHAIN_ID_BY_NAME } from './utils/vaults';
-
-type YoClientConfig = Parameters<typeof createYoClient>[0];
-type YoPublicClient = YoClientConfig['publicClient'];
 
 const readonlyClients = {
   1: createPublicClient({ chain: mainnet, transport: http() }),
   8453: createPublicClient({ chain: base, transport: http() }),
   42161: createPublicClient({ chain: arbitrum, transport: http() }),
-} as const;
+} as Record<SupportedChainId, any>;
 
 const pageTransition = {
   initial: { opacity: 0, y: 16, filter: 'blur(6px)' },
@@ -74,9 +71,10 @@ function PendingRedeemSync() {
         const chainId = CHAIN_ID_BY_NAME[tx.network];
         const client = createYoClient({
           chainId,
-          // The YO SDK currently ships with a pinned viem version (2.44.2),
-          // while app-level wagmi/viem may be newer. Cast keeps runtime-safe clients usable.
-          publicClient: readonlyClients[chainId] as unknown as YoPublicClient,
+          partnerId: 9999,
+          publicClients: {
+            [chainId]: readonlyClients[chainId],
+          },
         });
 
         try {
