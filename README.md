@@ -34,7 +34,7 @@
 
 ## 🌐 Live Demo
 
-> 🔗 **[Try LuminaSave Live →](#)** *(Vercel deployment link)*
+> 🔗 **[Try LuminaSave Live →](https://lumina-save.vercel.app/)** *(Vercel deployment)*
 
 **Quick Start:** Click **"Try on Base"** on the landing page to instantly connect your wallet, switch to Base network, and start a live deposit flow — all in one click.
 
@@ -105,52 +105,82 @@ Traditional DeFi yield vaults are powerful — but intimidating. Users face comp
 
 ## 🔗 YO SDK Integration
 
-> **This is the core hackathon requirement.** LuminaSave uses `@yo-protocol/core` and `@yo-protocol/react` for **all** onchain interactions.
+> **This is the core hackathon requirement.** LuminaSave uses `@yo-protocol/core` v1.0.4 and `@yo-protocol/react` v1.0.4 for **all** onchain interactions.
 
-### SDK Functions Used
+### SDK Architecture (v1.0.4 — Prepare + Send Pattern)
+
+The latest SDK separates **transaction preparation** from **transaction sending**. Core only prepares transactions (`PreparedTransaction`), and React hooks handle sending via wagmi.
 
 ```typescript
-// 1. Client Initialization
+// 1. Provider Setup — YieldProvider wraps the app
+import { YieldProvider } from '@yo-protocol/react';
+
+<YieldProvider partnerId={9999} defaultSlippageBps={50}>
+  <App />
+</YieldProvider>
+
+// 2. Deposit Flow — useDeposit hook (auto-handles approval + chain switching)
+import { useDeposit } from '@yo-protocol/react';
+
+const { deposit, step, approveHash, reset } = useDeposit({
+  vault: 'yoUSD',
+  slippageBps: 50,
+  onSubmitted: (hash) => { /* tx sent */ },
+  onConfirmed: (hash) => { /* tx confirmed */ },
+  onError: (err) => { /* handle error */ },
+});
+await deposit({ token: usdcAddress, amount: 1_000_000n, chainId: 8453 });
+
+// 3. Redeem Flow — useRedeem hook (auto-handles share approval)
+import { useRedeem, useUserPosition } from '@yo-protocol/react';
+
+const { position } = useUserPosition('yoUSD');
+const { redeem, step, instant, assetsOrRequestId } = useRedeem({ vault: 'yoUSD' });
+await redeem(sharesToRedeem);
+// instant === true → received assets immediately
+// instant === false → queued, assetsOrRequestId = request ID
+
+// 4. Core client for read-only operations (e.g., pending redemption polling)
 import { createYoClient, VAULTS } from '@yo-protocol/core';
 
 const client = createYoClient({
-  chainId: supportedChainId,
-  publicClient,
-  walletClient,
+  chainId: 8453,
+  partnerId: 9999,
+  publicClients: { 8453: publicClient },
 });
-
-// 2. Deposit Flow (Approve + Deposit)
-await client.depositWithApproval(vaultAddress, amount, userAddress);
-
-// 3. Redeem/Withdraw Flow
-await client.redeem(vaultAddress, shares, userAddress);
-await client.waitForRedeemReceipt(txHash);
-
-// 4. Pending Redemption Polling
-const pending = await client.getPendingRedemptions(vaultAddress, userAddress);
+const pending = await client.getPendingRedemptions(vault.address, userAddress);
 ```
 
 ### Integration Points
 
 | File | SDK Usage |
 |------|-----------|
-| `src/hooks/useYoRuntime.ts` | Creates YO client with chain-aware config, resolves vault configs, underlying token addresses |
-| `src/components/DepositModal.tsx` | Executes `depositWithApproval()` with real approve → deposit flow |
-| `src/components/RedeemModal.tsx` | Executes `redeem()` + `waitForRedeemReceipt()`, handles queued redemptions |
-| `src/App.tsx` (`PendingRedeemSync`) | Polls `getPendingRedemptions()` every 25s for queued redeem settlement |
+| `src/wallet/WalletProvider.tsx` | Wraps app with `YieldProvider` (partnerId, slippage config) |
+| `src/hooks/useYoRuntime.ts` | Creates `YoClient` with chain-aware `publicClients` map, resolves vault and token info |
+| `src/components/DepositModal.tsx` | Uses `useDeposit` hook — auto approve → deposit with step tracking |
+| `src/components/RedeemModal.tsx` | Uses `useRedeem` + `useUserPosition` hooks — handles instant/queued redeems |
+| `src/App.tsx` (`PendingRedeemSync`) | Polls `getPendingRedemptions()` every 25s via core client for queued settlement |
 | `src/utils/vaults.ts` | Maps `VAULTS` registry to UI-friendly config with risk, fees, and explorer links |
+
+### React Hooks Used
+
+| Hook | Purpose |
+|------|---------|
+| `useDeposit` | Prepare + send deposit with auto-approval and step tracking |
+| `useRedeem` | Prepare + send redeem with share approval and instant/queued detection |
+| `useUserPosition` | Get user's share balance and asset value in a vault |
 
 ### Transaction Flow Diagram
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐     ┌──────────────┐
-│  User picks  │────▶│  Approve ERC │────▶│  Deposit via│────▶│  Tx Confirmed│
-│  Vault + Amt │     │  20 Token    │     │  YO SDK     │     │  + Proof Link│
+│  User picks  │────▶│  useDeposit  │────▶│  Auto-Approve│────▶│  Tx Confirmed│
+│  Vault + Amt │     │  hook        │     │  + Deposit   │     │  + Proof Link│
 └─────────────┘     └──────────────┘     └─────────────┘     └──────────────┘
 
 ┌─────────────┐     ┌──────────────┐     ┌─────────────────┐     ┌───────────┐
-│  User clicks │────▶│  Redeem via  │────▶│  Instant ✅ or   │────▶│  Explorer │
-│  Withdraw    │     │  YO SDK      │     │  Queued ⏳ Poll  │     │  Proof    │
+│  User clicks │────▶│  useRedeem   │────▶│  Instant ✅ or   │────▶│  Explorer │
+│  Withdraw    │     │  hook        │     │  Queued ⏳ Poll  │     │  Proof    │
 └─────────────┘     └──────────────┘     └─────────────────┘     └───────────┘
 ```
 
@@ -241,7 +271,7 @@ LuminaSave/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/pandu-dargah/LuminaSave.git
+git clone https://github.com/panzauto46-bot/LuminaSave.git
 
 # 2. Navigate to the project
 cd LuminaSave
@@ -314,7 +344,7 @@ npm run preview    # Preview the production build locally
 | **Styling** | TailwindCSS 4.1 | Utility-first CSS with custom design tokens |
 | **Animation** | Framer Motion 12.x | Page transitions, scroll animations, micro-interactions |
 | **Web3 Wallet** | Wagmi 3.5 + Viem 2.46 | Wallet connection, chain switching, tx management |
-| **YO Protocol** | @yo-protocol/core 0.0.3 | Vault deposits, redeems, pending redemption polling |
+| **YO Protocol** | @yo-protocol/core + react 1.0.4 | Vault deposits (useDeposit), redeems (useRedeem), positions (useUserPosition), pending redemption polling |
 | **Icons** | Lucide React | Clean, consistent icon set |
 | **State** | React useReducer + Context | Lightweight global state with localStorage persistence |
 
@@ -326,7 +356,7 @@ npm run preview    # Preview the production build locally
 |----------|---------------------------|
 | **UX Simplicity** | Goal-based pockets, demo-ready empty states, "Try on Base" one-click onboarding, intuitive vault selector |
 | **Creativity & Growth** | Proof panel, shareable progress card (downloadable PNG), clear savings journey visualization |
-| **YO SDK Integration** | Live `depositWithApproval`, `redeem`, `waitForRedeemReceipt`, `getPendingRedemptions` — all real onchain flows |
+| **YO SDK Integration** | Uses latest SDK v1.0.4 React hooks (`useDeposit`, `useRedeem`, `useUserPosition`), `YieldProvider`, prepare+send pattern — all real onchain flows |
 | **Risk & Trust** | Vault-specific risk page with fee breakdown, drawdown context, contract/audit links, explorer proof for every tx |
 
 ---
@@ -392,6 +422,44 @@ State is automatically persisted to `localStorage` under key `luminasave:state:v
 
 ---
 
+## 🗺️ Roadmap
+
+### ✅ Phase 1 — MVP (Completed)
+- [x] Goal-based savings pockets with target tracking
+- [x] Multi-vault support (yoUSD, yoETH, yoBTC)
+- [x] Multi-chain (Base, Arbitrum, Ethereum) with auto chain-switch
+- [x] Live onchain deposit & redeem via YO SDK
+- [x] On-chain proof panel with explorer links
+- [x] Transaction history with CSV export
+- [x] Share progress card (PNG download)
+- [x] Dark/Light mode with premium design
+- [x] Real-time notification system
+
+### ✅ Phase 2 — SDK v1.0.4 Migration (Completed)
+- [x] Migrate to `@yo-protocol/core` v1.0.4 (prepare + send pattern)
+- [x] Migrate to `@yo-protocol/react` v1.0.4 (React hooks)
+- [x] Integrate `YieldProvider` with partnerId & slippage config
+- [x] Use `useDeposit` hook with auto-approval & step tracking
+- [x] Use `useRedeem` + `useUserPosition` hooks
+- [x] Step-by-step transaction UI (approving → depositing → waiting → success)
+
+### 🔜 Phase 3 — Enhanced Features (Planned)
+- [ ] Real-time vault APY display via `useVaultStats` / `useVaultSnapshot`
+- [ ] User portfolio performance dashboard via `useUserPerformance`
+- [ ] Multi-chain position overview via `useUserPositions`
+- [ ] Merkl rewards claim (Base chain) via `useClaimMerklRewards`
+- [ ] Push notification for price alerts & yield changes
+- [ ] Mobile-optimized PWA version
+
+### 🚀 Phase 4 — Growth (Future)
+- [ ] Social savings groups (shared pockets)
+- [ ] Recurring auto-deposit schedules
+- [ ] Fiat on-ramp integration
+- [ ] AI-powered savings recommendations
+- [ ] Multi-language support
+
+---
+
 ## 🤝 Contributing
 
 1. Fork the repository
@@ -415,7 +483,7 @@ This project is open source and available under the [MIT License](LICENSE).
     <td>
       <strong>Pandu Dargah</strong><br/>
       Builder & Designer<br/>
-      <a href="https://github.com/pandu-dargah">GitHub</a>
+      <a href="https://github.com/panzauto46-bot">GitHub</a>
     </td>
   </tr>
 </table>
